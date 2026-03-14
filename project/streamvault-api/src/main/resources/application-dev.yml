@@ -1,0 +1,26 @@
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/streamvault
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
+app:
+  jwt:
+    public-key: classpath:keys/jwt-public.pem
+    private-key: classpath:keys/jwt-private.pem
+
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket-videos: ${MINIO_BUCKET_VIDEOS:streamvault-videos}
+  bucket-thumbnails: ${MINIO_BUCKET_THUMBNAILS:streamvault-thumbnails}
+
+logging:
+  level:
+    com.betha.streamvault: DEBUG
+    org.springframework.security: DEBUG
