@@ -4,9 +4,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoders;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
+import reactor.core.publisher.Mono;
 
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPublicKey;
@@ -34,22 +36,13 @@ public class JwtConfig {
     }
 
     @Bean
-    public ReactiveJwtDecoder jwtDecoder(RSAPublicKey rsaPublicKey) {
-        return ReactiveJwtDecoders.fromIssuerLocation("streamvault");
+    public ReactiveJwtDecoder reactiveJwtDecoder(RSAPublicKey rsaPublicKey) {
+        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey(rsaPublicKey).build();
+        return token -> Mono.just(jwtDecoder.decode(token));
     }
 
     @Bean
-    public JwtDecoder jwtDecoderSimple(RSAPublicKey rsaPublicKey) {
-        return new JwtDecoder() {
-            @Override
-            public org.springframework.security.oauth2.jwt.Jwt decode(String token) {
-                try {
-                    var decoder = ReactiveJwtDecoders.fromIssuerLocation("streamvault");
-                    return decoder.decode(token).block();
-                } catch (Exception e) {
-                    throw new RuntimeException("Failed to decode JWT", e);
-                }
-            }
-        };
+    public JwtDecoder jwtDecoder(RSAPublicKey rsaPublicKey) {
+        return NimbusJwtDecoder.withPublicKey(rsaPublicKey).build();
     }
 }
