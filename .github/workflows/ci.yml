@@ -1,0 +1,161 @@
+# ==============================================================================
+# EXPLICACIÓN DETALLADA DE ESTE WORKFLOW
+# ==============================================================================
+#
+# Este archivo define qué hace GitHub Actions cada vez que hacés push o PR.
+# Se guarda en: .github/workflows/ci.yml
+#
+# on push: se ejecuta cuando hacés git push
+# on pull_request: se ejecuta cuando abrís un PR
+#
+# ==============================================================================
+
+# Nombre del workflow
+name: CI/CD Pipeline
+
+# Cuándo se ejecuta (triggers)
+on:
+  # Cuando hacés push a main
+  push:
+    branches: [ main ]
+  # Cuando abrís o actualizáis un Pull Request a main
+  pull_request:
+    branches: [ main ]
+
+# ==============================================================================
+# JOBS: Conjunto de tareas a ejecutar
+# ==============================================================================
+
+jobs:
+  
+  # --------------------------------------------------------------------------
+  # JOB 1: COMPILAR Y TESTEAR
+  # --------------------------------------------------------------------------
+  build-and-test:
+    # Qué sistema operativo usa (ubuntu-latest es gratis y rápido)
+    runs-on: ubuntu-latest
+    
+    # Pasos (steps) del job
+    steps:
+      
+      # -----------------------------------------------------------------------
+      # STEP 1: Checkout del código
+      # -----------------------------------------------------------------------
+      # Descarga el código de tu repositorio a la máquina virtual
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # -----------------------------------------------------------------------
+      # STEP 2: Instalar Java 21
+      # -----------------------------------------------------------------------
+      # Configura JDK 21 en la máquina virtual
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'  # Distribución de OpenJDK
+      
+      # -----------------------------------------------------------------------
+      # STEP 3: Cache de dependencias de Maven
+      # -----------------------------------------------------------------------
+      # Guarda las dependencias en cache para que la próxima vez sea más rápido
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      
+      # -----------------------------------------------------------------------
+      # STEP 4: Compilar el proyecto
+      # -----------------------------------------------------------------------
+      # mvn clean compile = limpia y compila el código
+      - name: Build project
+        run: mvn clean compile -q
+      
+      # -----------------------------------------------------------------------
+      # STEP 5: Ejecutar tests
+      # -----------------------------------------------------------------------
+      # mvn test = corre todos los tests de JUnit
+      - name: Run tests
+        run: mvn test
+      
+      # -----------------------------------------------------------------------
+      # STEP 6: Empaquetar (package)
+      # -----------------------------------------------------------------------
+      # Crea el archivo .jar del proyecto
+      - name: Package application
+        run: mvn package -DskipTests
+
+  # --------------------------------------------------------------------------
+  # JOB 2: CONSTRUIR DOCKER (opcional)
+  # --------------------------------------------------------------------------
+  docker-build:
+    # Este job corre DESPUÉS de build-and-test (needs: build-and-test)
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    
+    steps:
+      
+      # Login a GitHub Container Registry (para guardar la imagen)
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Checkout del código
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Set up Docker BuildX (herramienta para construir imágenes)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      # Construir la imagen de Docker
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./project/streamvault-api
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:latest
+          cache-to: type=inline
+
+  # --------------------------------------------------------------------------
+  # JOB 3: ANÁLISIS DE CÓDIGO (SonarCloud - OPCIONAL)
+  # --------------------------------------------------------------------------
+  # Descomentá este job si querés análisis de código estático
+  # Para activarlo, necesitas una cuenta gratis en sonarcloud.io
+  
+  # sonarcloud:
+  #   needs: build-and-test
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: sonarcloud/sonarcloud-github-action@master
+  #       with:
+  #         organization: "TU_USUARIO_SONARCLOUD"
+  #       env:
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+# ==============================================================================
+# RESUMEN DE LO QUE HACE ESTE PIPELINE:
+# ==============================================================================
+#
+# 1. checkout: Descarga tu código
+# 2. setup-java: Instala Java 21
+# 3. cache: Guarda dependencias de Maven (más rápido)
+# 4. mvn clean compile: Compila el proyecto
+# 5. mvn test: Ejecuta los tests
+# 6. mvn package: Crea el .jar
+# 7. docker build: Construye imagen Docker
+# 8. docker push: Sube la imagen a GitHub Container Registry
+#
+# SI ALGO FALLA: Te llega una notificación por email desde GitHub
+#
+# ==============================================================================
