@@ -1,6 +1,6 @@
 spring:
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/streamvault
+    url: r2dbc:postgresql://localhost:5432/postgres
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}

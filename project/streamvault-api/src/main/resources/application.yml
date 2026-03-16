@@ -4,8 +4,8 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   r2dbc:
-    username: ${DB_USER:streamvault}
-    password: ${DB_PASSWORD:streamvault}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
   mail:
     username: ${MAIL_FROM:noreply@streamvault.local}
     password: ${MAIL_PASSWORD:}
