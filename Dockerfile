@@ -15,8 +15,12 @@ FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
 # Copiamos el POM para descargar dependencias primero (optimización de caché)
-COPY project/streamvault-api/pom.xml .
+# nota: el proyecto está en project/streamvault-api/
+COPY project/streamvault-api/pom.xml project/streamvault-api/
 COPY project/streamvault-api project/streamvault-api
+
+# Nos movemos al directorio del proyecto
+WORKDIR /app/project/streamvault-api
 
 # Descargamos las dependencias
 RUN apk add --no-cache maven

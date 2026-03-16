@@ -63,7 +63,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-${{ hashFiles('project/streamvault-api/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
       
@@ -71,22 +71,23 @@ jobs:
       # STEP 4: Compilar el proyecto
       # -----------------------------------------------------------------------
       # mvn clean compile = limpia y compila el código
+      # nota: el pom.xml está en project/streamvault-api/
       - name: Build project
-        run: mvn clean compile -q
+        run: cd project/streamvault-api && mvn clean compile -q
       
       # -----------------------------------------------------------------------
       # STEP 5: Ejecutar tests
       # -----------------------------------------------------------------------
       # mvn test = corre todos los tests de JUnit
       - name: Run tests
-        run: mvn test
+        run: cd project/streamvault-api && mvn test
       
       # -----------------------------------------------------------------------
       # STEP 6: Empaquetar (package)
       # -----------------------------------------------------------------------
       # Crea el archivo .jar del proyecto
       - name: Package application
-        run: mvn package -DskipTests
+        run: cd project/streamvault-api && mvn package -DskipTests
 
   # --------------------------------------------------------------------------
   # JOB 2: CONSTRUIR DOCKER (opcional)
@@ -115,10 +116,12 @@ jobs:
         uses: docker/setup-buildx-action@v3
       
       # Construir la imagen de Docker
+      # nota: el contexto de build es la raíz del repo, pero el pom.xml está en project/streamvault-api
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./project/streamvault-api
+          context: .
+          file: ./Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
