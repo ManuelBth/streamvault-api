@@ -6,7 +6,7 @@ import com.betha.streamvault.auth.dto.TokenResponse;
 import com.betha.streamvault.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
-@Slf4j
+@Log4j2
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor

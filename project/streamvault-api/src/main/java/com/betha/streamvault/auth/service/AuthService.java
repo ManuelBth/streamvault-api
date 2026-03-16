@@ -8,7 +8,7 @@ import com.betha.streamvault.user.model.User;
 import com.betha.streamvault.user.repository.UserRepository;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -19,7 +19,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.UUID;
 
-@Slf4j
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class AuthService {

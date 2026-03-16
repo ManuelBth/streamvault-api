@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="LOG_PATH">logs</Property>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Console Appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <!-- File Appender - Application logs -->
+        <RollingFile name="AppLog" 
+                     fileName="${LOG_PATH}/streamvault.log"
+                     filePattern="${LOG_PATH}/streamvault-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+
+        <!-- File Appender - Error logs only -->
+        <RollingFile name="ErrorLog" 
+                     fileName="${LOG_PATH}/streamvault-error.log"
+                     filePattern="${LOG_PATH}/streamvault-error-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Filters>
+                <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="50MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- Spring Framework loggers -->
+        <Logger name="org.springframework" level="INFO"/>
+        <Logger name="org.springframework.web" level="DEBUG"/>
+        <Logger name="org.springframework.security" level="DEBUG"/>
+        
+        <!-- Reactor Netty -->
+        <Logger name="reactor.netty" level="INFO"/>
+        
+        <!-- Database & R2DBC -->
+        <Logger name="io.r2dbc" level="DEBUG"/>
+        <Logger name="org.flywaydb" level="INFO"/>
+        
+        <!-- Application loggers -->
+        <Logger name="com.betha.streamvault" level="DEBUG"/>
+
+        <!-- Root logger -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AppLog"/>
+            <AppenderRef ref="ErrorLog"/>
+        </Root>
+    </Loggers>
+</Configuration>
