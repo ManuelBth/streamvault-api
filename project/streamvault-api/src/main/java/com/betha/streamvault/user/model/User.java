@@ -36,6 +36,9 @@ public class User {
     @Column("created_at")
     private Instant createdAt;
 
+    @Column("updated_at")
+    private Instant updatedAt;
+
     @Column("subscription_id")
     private UUID subscriptionId;
 

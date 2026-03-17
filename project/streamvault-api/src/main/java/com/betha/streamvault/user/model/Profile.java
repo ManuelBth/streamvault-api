@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -27,8 +28,8 @@ public class Profile {
     @Column("avatar_url")
     private String avatarUrl;
 
-    @Column("is_kids")
-    private Boolean isKids;
+    @Column("created_at")
+    private Instant createdAt;
 
-    public static final int MAX_PROFILES_PER_USER = 4;
+    public static final int MAX_PROFILES_PER_USER = 3;
 }
