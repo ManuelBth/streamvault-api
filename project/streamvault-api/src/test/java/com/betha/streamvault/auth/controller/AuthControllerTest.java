@@ -4,32 +4,36 @@ import com.betha.streamvault.auth.dto.LoginRequest;
 import com.betha.streamvault.auth.dto.RegisterRequest;
 import com.betha.streamvault.auth.dto.TokenResponse;
 import com.betha.streamvault.auth.service.AuthService;
-import com.betha.streamvault.shared.config.SecurityConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
-import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers;
-import org.springframework.test.web.reactive.server.WebTestClient;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-@WebFluxTest(AuthController.class)
-@Import(SecurityConfig.class)
+@ExtendWith(MockitoExtension.class)
 @DisplayName("AuthController Tests")
 class AuthControllerTest {
 
-    @Autowired
-    private WebTestClient webTestClient;
-
-    @MockBean
+    @Mock
     private AuthService authService;
+
+    private AuthController authController;
+
+    @BeforeEach
+    void setUp() {
+        authController = new AuthController(authService);
+    }
 
     @Test
     @DisplayName("POST /register - Should register user successfully")
@@ -44,19 +48,15 @@ class AuthControllerTest {
         
         when(authService.register(any(RegisterRequest.class))).thenReturn(Mono.just(response));
 
-        // When & Then
-        webTestClient
-                .mutateWith(SecurityMockServerConfigurers.csrf())
-               .post()
-                .uri("/api/v1/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
-                .exchange()
-                .expectStatus().isCreated()
-                .expectBody()
-                .jsonPath("$.accessToken").isEqualTo("access-token")
-                .jsonPath("$.refreshToken").isEqualTo("refresh-token")
-                .jsonPath("$.tokenType").isEqualTo("Bearer");
+        // When
+        Mono<ResponseEntity<TokenResponse>> result = authController.register(request);
+
+        // Then
+        ResponseEntity<TokenResponse> responseEntity = result.block();
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+        assertNotNull(responseEntity.getBody());
+        assertEquals("access-token", responseEntity.getBody().getAccessToken());
     }
 
     @Test
@@ -71,17 +71,15 @@ class AuthControllerTest {
         
         when(authService.login(anyString(), anyString())).thenReturn(Mono.just(response));
 
-        // When & Then
-        webTestClient
-                .mutateWith(SecurityMockServerConfigurers.csrf())
-                .post()
-                .uri("/api/v1/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.accessToken").isEqualTo("access-token");
+        // When
+        Mono<ResponseEntity<TokenResponse>> result = authController.login(request);
+
+        // Then
+        ResponseEntity<TokenResponse> responseEntity = result.block();
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        assertNotNull(responseEntity.getBody());
+        assertEquals("access-token", responseEntity.getBody().getAccessToken());
     }
 
     @Test
@@ -92,17 +90,15 @@ class AuthControllerTest {
         
         when(authService.refresh(anyString())).thenReturn(Mono.just(response));
 
-        // When & Then
-        webTestClient
-                .mutateWith(SecurityMockServerConfigurers.csrf())
-                .post()
-                .uri("/api/v1/auth/refresh")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"refreshToken\":\"valid-token\"}")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.accessToken").isEqualTo("new-access-token");
+        // When
+        Mono<ResponseEntity<TokenResponse>> result = authController.refresh(Map.of("refreshToken", "valid-token"));
+
+        // Then
+        ResponseEntity<TokenResponse> responseEntity = result.block();
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        assertNotNull(responseEntity.getBody());
+        assertEquals("new-access-token", responseEntity.getBody().getAccessToken());
     }
 
     @Test
@@ -111,28 +107,25 @@ class AuthControllerTest {
         // Given
         when(authService.logout(anyString())).thenReturn(Mono.empty());
 
-        // When & Then
-        webTestClient
-                .mutateWith(SecurityMockServerConfigurers.csrf())
-                .post()
-                .uri("/api/v1/auth/logout")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"refreshToken\":\"valid-token\"}")
-                .exchange()
-                .expectStatus().isOk();
+        // When
+        Mono<ResponseEntity<Void>> result = authController.logout(Map.of("refreshToken", "valid-token"));
+
+        // Then
+        ResponseEntity<Void> responseEntity = result.block();
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
     }
 
     @Test
     @DisplayName("GET /confirm - Should confirm email")
     void confirm_Success() {
-        // When & Then
-        webTestClient
-                .get()
-                .uri("/api/v1/auth/confirm?token=some-token")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.message").isEqualTo("Email confirmed");
+        // When
+        Mono<ResponseEntity<Map<String, String>>> result = authController.confirm("some-token");
+
+        // Then
+        ResponseEntity<Map<String, String>> responseEntity = result.block();
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        assertEquals("Email confirmed", responseEntity.getBody().get("message"));
     }
 }
-

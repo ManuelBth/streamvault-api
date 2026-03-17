@@ -1,5 +1,6 @@
 package com.betha.streamvault.user.model;
 
+
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;

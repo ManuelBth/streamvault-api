@@ -44,9 +44,9 @@ public class JwtService {
         try {
             if (keyPath.startsWith("classpath:")) {
                 String resourcePath = keyPath.replace("classpath:", "");
-                java.io.InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath.replace("keys/", ""));
+                java.io.InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath);
                 if (is == null) {
-                    log.warn("JWT private key not found, using temporary key for dev");
+                    log.warn("JWT private key not found at: {}", resourcePath);
                     return null;
                 }
                 String key = new String(is.readAllBytes());
@@ -63,9 +63,9 @@ public class JwtService {
         try {
             if (keyPath.startsWith("classpath:")) {
                 String resourcePath = keyPath.replace("classpath:", "");
-                java.io.InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath.replace("keys/", ""));
+                java.io.InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath);
                 if (is == null) {
-                    log.warn("JWT public key not found, using temporary key for dev");
+                    log.warn("JWT public key not found at: {}", resourcePath);
                     return null;
                 }
                 String key = new String(is.readAllBytes());
@@ -166,5 +166,15 @@ public class JwtService {
         Claims claims = validateToken(token);
         if (claims == null) return null;
         return claims.get("role", String.class);
+    }
+
+    public String extractUsername(String token) {
+        return getEmailFromToken(token);
+    }
+
+    public <T> T extractClaim(String token, String claim, Class<T> clazz) {
+        Claims claims = validateToken(token);
+        if (claims == null) return null;
+        return claims.get(claim, clazz);
     }
 }
