@@ -1,4 +1,5 @@
-# Angular specific
+# Minio data
+minio/
 /dist/
 /out-tsc/
 /tmp/
@@ -27,7 +28,21 @@
 # TypeScript cache
 *.tsbuildinfo
 
+# Java/Eclipse/Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+.classpath
+.project
+.settings/
+.factorypath
+*.factorypath
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs/
