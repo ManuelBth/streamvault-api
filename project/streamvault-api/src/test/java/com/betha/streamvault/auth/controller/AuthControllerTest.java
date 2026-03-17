@@ -47,7 +47,7 @@ class AuthControllerTest {
         // When & Then
         webTestClient
                 .mutateWith(SecurityMockServerConfigurers.csrf())
-                .post()
+               .post()
                 .uri("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
@@ -135,3 +135,4 @@ class AuthControllerTest {
                 .jsonPath("$.message").isEqualTo("Email confirmed");
     }
 }
+

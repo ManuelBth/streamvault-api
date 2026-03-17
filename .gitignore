@@ -14,6 +14,11 @@
 
 # Environment files
 /.env
+*.local.yml
+
+# IDE
+.idea/
+*.iml
 
 # Angular CLI and build artefacts
 /.angular-cli.json
