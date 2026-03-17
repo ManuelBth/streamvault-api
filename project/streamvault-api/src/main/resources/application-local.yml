@@ -1,0 +1,10 @@
+# Configuración local - NO COMMITEAR
+# Este archivo contiene credenciales locales
+
+spring:
+  r2dbc:
+    username: postgres
+    password: Junos123
+  datasource:
+    username: postgres
+    password: Junos123
