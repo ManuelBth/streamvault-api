@@ -67,7 +67,12 @@ public class NotificationService {
     }
 
     public Mono<Void> markAllAsRead(UUID userId) {
-        return notificationRepository.markAllAsReadByUserId(userId);
+        return notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId)
+                .flatMap(notification -> {
+                    notification.setIsRead(true);
+                    return notificationRepository.save(notification);
+                })
+                .then();
     }
 
     public Mono<NotificationResponse> createBroadcastNotification(Notification.NotificationType type,
