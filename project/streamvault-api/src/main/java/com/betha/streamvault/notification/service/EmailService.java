@@ -19,10 +19,24 @@ public class EmailService {
     public Mono<Void> sendEmail(SendEmailRequest request) {
         return Mono.fromRunnable(() -> {
             SimpleMailMessage message = new SimpleMailMessage();
+            
+            // Siempre usar noreply@streamvault.com como remitente
+            // El email del remitente real se muestra en el cuerpo del mensaje
+            String senderEmail = (request.getFrom() != null && !request.getFrom().isBlank())
+                    ? request.getFrom()
+                    : null;
+            
             message.setFrom(fromEmail);
             message.setTo(request.getTo());
             message.setSubject(request.getSubject());
-            message.setText(request.getBody());
+            
+            // Si tenemos el email del remitente, agregarlo al cuerpo del mensaje
+            if (senderEmail != null) {
+                message.setText("Enviado por: " + senderEmail + "\n\n" + request.getBody());
+            } else {
+                message.setText(request.getBody());
+            }
+            
             mailSender.send(message);
         });
     }

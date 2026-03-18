@@ -1,0 +1,240 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-03-17T15:30:00.000Z",
+  "resources": [
+    {
+      "_id": "env_streamvault",
+      "name": "StreamVault Local",
+      "parentId": null,
+      "values": [
+        {
+          "key": "baseUrl",
+          "value": "http://localhost:8080/api/v1",
+          "type": "text",
+          "enabled": true
+        },
+        {
+          "key": "accessToken",
+          "value": "",
+          "type": "secret",
+          "enabled": true
+        },
+        {
+          "key": "refreshToken",
+          "value": "",
+          "type": "secret",
+          "enabled": true
+        },
+        {
+          "key": "userId",
+          "value": "",
+          "type": "text",
+          "enabled": true
+        }
+      ],
+      "_type": "environment"
+    },
+    {
+      "_id": "folder_auth",
+      "name": "Auth",
+      "parentId": null,
+      "_type": "request_group"
+    },
+    {
+      "_id": "folder_notifications",
+      "name": "Notifications",
+      "parentId": null,
+      "_type": "request_group"
+    },
+    {
+      "_id": "folder_mail",
+      "name": "Mail",
+      "parentId": null,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_register",
+      "name": "Register",
+      "parentId": "folder_auth",
+      "url": "{{baseUrl}}/auth/register",
+      "method": "POST",
+      "body": {
+        "mode": "json",
+        "json": {
+          "email": "testuser@streamvault.local",
+          "password": "password123",
+          "name": "Test User"
+        }
+      },
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_login",
+      "name": "Login",
+      "parentId": "folder_auth",
+      "url": "{{baseUrl}}/auth/login",
+      "method": "POST",
+      "body": {
+        "mode": "json",
+        "json": {
+          "email": "testuser@streamvault.local",
+          "password": "password123"
+        }
+      },
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_refresh",
+      "name": "Refresh Token",
+      "parentId": "folder_auth",
+      "url": "{{baseUrl}}/auth/refresh",
+      "method": "POST",
+      "body": {
+        "mode": "json",
+        "json": {
+          "refreshToken": "{{refreshToken}}"
+        }
+      },
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_logout",
+      "name": "Logout",
+      "parentId": "folder_auth",
+      "url": "{{baseUrl}}/auth/logout",
+      "method": "POST",
+      "body": {
+        "mode": "json",
+        "json": {
+          "refreshToken": "{{refreshToken}}"
+        }
+      },
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{accessToken}}"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_notifications",
+      "name": "Get All Notifications",
+      "parentId": "folder_notifications",
+      "url": "{{baseUrl}}/notifications",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer {{accessToken}}"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_unread",
+      "name": "Get Unread Notifications",
+      "parentId": "folder_notifications",
+      "url": "{{baseUrl}}/notifications/unread",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer {{accessToken}}"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_unread_count",
+      "name": "Get Unread Count",
+      "parentId": "folder_notifications",
+      "url": "{{baseUrl}}/notifications/unread/count",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer {{accessToken}}"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_mark_read",
+      "name": "Mark as Read",
+      "parentId": "folder_notifications",
+      "url": "{{baseUrl}}/notifications/__REPLACE_WITH_NOTIFICATION_ID__/read",
+      "method": "PUT",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer {{accessToken}}"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_mark_all_read",
+      "name": "Mark All as Read",
+      "parentId": "folder_notifications",
+      "url": "{{baseUrl}}/notifications/read-all",
+      "method": "PUT",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer {{accessToken}}"
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_send_email",
+      "name": "Send Email",
+      "parentId": "folder_mail",
+      "url": "{{baseUrl}}/mail/send",
+      "method": "POST",
+      "body": {
+        "mode": "json",
+        "json": {
+          "to": "user@example.com",
+          "subject": "Test Email",
+          "body": "This is a test email from StreamVault API"
+        }
+      },
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{accessToken}}"
+        }
+      ],
+      "_type": "request"
+    }
+  ]
+}

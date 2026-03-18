@@ -16,4 +16,8 @@ public class SendEmailRequest {
 
     @NotBlank(message = "El cuerpo del email es obligatorio")
     private String body;
+
+    // Remitente opcional - si no se provee, usa noreply@streamvault.com
+    // Solo se permite en Emails del sistema (bienvenida, recuperación, etc.)
+    private String from;
 }
