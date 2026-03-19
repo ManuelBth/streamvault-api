@@ -26,6 +26,18 @@ public class MailUser {
     @Column("password")
     private String password;
 
+    @Column("maildir")
+    private String maildir;
+
+    @Column("quota")
+    private Long quota;
+
+    @Column("active")
+    private Boolean active;
+
     @Column("created_at")
     private Instant createdAt;
+
+    @Column("updated_at")
+    private Instant updatedAt;
 }

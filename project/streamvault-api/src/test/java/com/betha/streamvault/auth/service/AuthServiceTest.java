@@ -44,14 +44,20 @@ class AuthServiceTest {
     @Mock
     private MailUserService mailUserService;
 
-    @InjectMocks
     private AuthService authService;
-
     private User testUser;
     private RegisterRequest registerRequest;
 
     @BeforeEach
     void setUp() {
+        authService = new AuthService(
+                userRepository,
+                refreshTokenRepository,
+                jwtService,
+                passwordEncoder,
+                mailUserService
+        );
+
         testUser = User.builder()
                 .id(UUID.randomUUID())
                 .email("test@streamvault.com")
