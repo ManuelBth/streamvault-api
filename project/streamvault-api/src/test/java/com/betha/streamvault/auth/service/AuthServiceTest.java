@@ -4,6 +4,7 @@ import com.betha.streamvault.auth.dto.RegisterRequest;
 import com.betha.streamvault.auth.dto.TokenResponse;
 import com.betha.streamvault.auth.model.RefreshToken;
 import com.betha.streamvault.auth.repository.RefreshTokenRepository;
+import com.betha.streamvault.notification.service.MailUserService;
 import com.betha.streamvault.user.model.User;
 import com.betha.streamvault.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,9 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private MailUserService mailUserService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -50,7 +54,7 @@ class AuthServiceTest {
     void setUp() {
         testUser = User.builder()
                 .id(UUID.randomUUID())
-                .email("test@streamvault.local")
+                .email("test@streamvault.com")
                 .passwordHash("hashedPassword")
                 .name("Test User")
                 .role(User.ROLE_USER)
@@ -58,7 +62,7 @@ class AuthServiceTest {
                 .build();
 
         registerRequest = new RegisterRequest();
-        registerRequest.setEmail("test@streamvault.local");
+        registerRequest.setEmail("test@streamvault.com");
         registerRequest.setPassword("password123");
         registerRequest.setName("Test User");
     }
@@ -70,6 +74,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail(anyString())).thenReturn(Mono.just(false));
         when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
         when(userRepository.save(any(User.class))).thenReturn(Mono.just(testUser));
+        when(mailUserService.createMailAccount(anyString(), anyString())).thenReturn(Mono.empty());
         when(jwtService.generateAccessToken(any(UUID.class), anyString(), anyString()))
                 .thenReturn("access-token");
         when(jwtService.generateRefreshToken(any(UUID.class)))
@@ -115,7 +120,7 @@ class AuthServiceTest {
                 .thenReturn(Mono.just(RefreshToken.builder().build()));
 
         // When & Then
-        StepVerifier.create(authService.login("test@streamvault.local", "password123"))
+        StepVerifier.create(authService.login("test@streamvault.com", "password123"))
                 .assertNext(response -> {
                     assertThat(response).isNotNull();
                     assertThat(response.getAccessToken()).isEqualTo("access-token");
@@ -131,7 +136,7 @@ class AuthServiceTest {
         when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
 
         // When & Then
-        StepVerifier.create(authService.login("test@streamvault.local", "wrongpassword"))
+        StepVerifier.create(authService.login("test@streamvault.com", "wrongpassword"))
                 .expectErrorMatches(throwable ->
                         throwable.getMessage().equals("Invalid credentials"))
                 .verify();
@@ -144,7 +149,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail(anyString())).thenReturn(Mono.empty());
 
         // When & Then
-        StepVerifier.create(authService.login("notfound@streamvault.local", "password"))
+        StepVerifier.create(authService.login("notfound@streamvault.com", "password"))
                 .expectErrorMatches(throwable ->
                         throwable.getMessage().equals("Invalid credentials"))
                 .verify();

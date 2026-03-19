@@ -10,12 +10,3 @@ spring:
     url: jdbc:postgresql://localhost:5432/streamvault
     username: postgres
     password: Junos123
-  mail:
-    host: localhost
-    port: 25
-    properties:
-      mail:
-        smtp:
-          auth: false
-          starttls:
-            enable: false

@@ -1,5 +1,6 @@
 package com.betha.streamvault.notification.controller;
 
+import com.betha.streamvault.auth.service.JwtService;
 import com.betha.streamvault.notification.dto.SendEmailRequest;
 import com.betha.streamvault.notification.service.EmailService;
 import com.betha.streamvault.user.dto.UserResponse;
@@ -34,13 +35,18 @@ class MailControllerTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private JwtService jwtService;
+
     @InjectMocks
     private MailController mailController;
 
     private SendEmailRequest emailRequest;
     private UserResponse testUser;
     private final UUID testUserId = UUID.randomUUID();
-    private final String testEmail = "test@streamvault.local";
+    private final String testEmail = "test@streamvault.com";
+    private final String validToken = "valid.jwt.token";
+    private final String authHeader = "Bearer " + validToken;
 
     @BeforeEach
     void setUp() {
@@ -63,11 +69,12 @@ class MailControllerTest {
     @DisplayName("sendEmail - Should send email with user as sender")
     void sendEmail_Success() {
         // Given
-        when(userService.getUserById(any(UUID.class))).thenReturn(Mono.just(testUser));
+        when(jwtService.getUserIdFromToken(validToken)).thenReturn(testUserId);
+        when(userService.getUserById(testUserId)).thenReturn(Mono.just(testUser));
         when(emailService.sendEmail(any(SendEmailRequest.class))).thenReturn(Mono.empty());
 
         // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, testUserId);
+        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, authHeader);
 
         // Then
         StepVerifier.create(result)
@@ -78,15 +85,61 @@ class MailControllerTest {
     }
 
     @Test
-    @DisplayName("sendEmail - Should return OK even when user not found (graceful degradation)")
-    void sendEmail_UserNotFound() {
+    @DisplayName("sendEmail - Should return 401 when no auth header")
+    void sendEmail_NoAuthHeader() {
+        // When
+        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, null);
+
+        // Then
+        StepVerifier.create(result)
+                .assertNext(response -> {
+                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("sendEmail - Should return 401 when invalid auth header format")
+    void sendEmail_InvalidAuthHeader() {
+        // When
+        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, "InvalidFormat");
+
+        // Then
+        StepVerifier.create(result)
+                .assertNext(response -> {
+                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("sendEmail - Should return 401 when token is invalid")
+    void sendEmail_InvalidToken() {
         // Given
-        when(userService.getUserById(any(UUID.class))).thenReturn(Mono.empty());
+        when(jwtService.getUserIdFromToken(anyString())).thenReturn(null);
 
         // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, testUserId);
+        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, authHeader);
 
-        // Then - returns 200 OK even if user not found (graceful degradation)
+        // Then
+        StepVerifier.create(result)
+                .assertNext(response -> {
+                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("sendEmail - Should return 200 when user not found (graceful degradation)")
+    void sendEmail_UserNotFound() {
+        // Given
+        when(jwtService.getUserIdFromToken(validToken)).thenReturn(testUserId);
+        when(userService.getUserById(testUserId)).thenReturn(Mono.empty());
+
+        // When - returns 200 OK even if user not found (graceful degradation)
+        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, authHeader);
+
+        // Then
         StepVerifier.create(result)
                 .assertNext(response -> {
                     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -98,12 +151,13 @@ class MailControllerTest {
     @DisplayName("sendEmail - Should handle error when email service fails")
     void sendEmail_Error() {
         // Given
-        when(userService.getUserById(any(UUID.class))).thenReturn(Mono.just(testUser));
+        when(jwtService.getUserIdFromToken(validToken)).thenReturn(testUserId);
+        when(userService.getUserById(testUserId)).thenReturn(Mono.just(testUser));
         when(emailService.sendEmail(any(SendEmailRequest.class)))
                 .thenReturn(Mono.error(new RuntimeException("SMTP Error")));
 
         // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, testUserId);
+        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, authHeader);
 
         // Then
         StepVerifier.create(result)

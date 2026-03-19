@@ -54,7 +54,7 @@ class NotificationControllerTest {
 
         testUserResponse = UserResponse.builder()
                 .id(userId)
-                .email("test@streamvault.local")
+                .email("test@streamvault.com")
                 .name("Test User")
                 .build();
 
@@ -89,7 +89,7 @@ class NotificationControllerTest {
 
         // When
         Mono<ResponseEntity<List<NotificationResponse>>> result = notificationController
-                .getNotifications("test@streamvault.local");
+                .getNotifications("test@streamvault.com");
 
         // Then
         StepVerifier.create(result)
@@ -110,7 +110,7 @@ class NotificationControllerTest {
 
         // When
         Mono<ResponseEntity<List<NotificationResponse>>> result = notificationController
-                .getUnreadNotifications("test@streamvault.local");
+                .getUnreadNotifications("test@streamvault.com");
 
         // Then
         StepVerifier.create(result)
@@ -131,7 +131,7 @@ class NotificationControllerTest {
 
         // When
         Mono<ResponseEntity<Map<String, Long>>> result = notificationController
-                .getUnreadCount("test@streamvault.local");
+                .getUnreadCount("test@streamvault.com");
 
         // Then
         StepVerifier.create(result)
@@ -151,7 +151,7 @@ class NotificationControllerTest {
 
         // When
         Mono<ResponseEntity<Void>> result = notificationController
-                .markAsRead("test@streamvault.local", notificationId);
+                .markAsRead("test@streamvault.com", notificationId);
 
         // Then
         StepVerifier.create(result)
@@ -170,7 +170,7 @@ class NotificationControllerTest {
 
         // When
         Mono<ResponseEntity<Void>> result = notificationController
-                .markAllAsRead("test@streamvault.local");
+                .markAllAsRead("test@streamvault.com");
 
         // Then
         StepVerifier.create(result)

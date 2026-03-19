@@ -56,7 +56,7 @@ class JwtServiceTest {
         );
         
         UUID userId = UUID.randomUUID();
-        String email = "test@streamvault.local";
+        String email = "test@streamvault.com";
         String role = "ROLE_USER";
         
         // When

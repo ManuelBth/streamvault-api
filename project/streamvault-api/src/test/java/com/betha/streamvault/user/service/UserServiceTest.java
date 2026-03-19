@@ -43,7 +43,7 @@ class UserServiceTest {
         
         testUser = User.builder()
                 .id(UUID.randomUUID())
-                .email("test@streamvault.local")
+                .email("test@streamvault.com")
                 .name("Test User")
                 .passwordHash("hashedPassword")
                 .role("ROLE_USER")
@@ -57,7 +57,7 @@ class UserServiceTest {
     void getCurrentUser_Success() {
         when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
 
-        StepVerifier.create(userService.getCurrentUser("test@streamvault.local"))
+        StepVerifier.create(userService.getCurrentUser("test@streamvault.com"))
                 .assertNext(response -> {
                     assertEquals(testUser.getEmail(), response.getEmail());
                     assertEquals(testUser.getName(), response.getName());
@@ -71,7 +71,7 @@ class UserServiceTest {
     void getCurrentUser_NotFound() {
         when(userRepository.findByEmail(anyString())).thenReturn(Mono.empty());
 
-        StepVerifier.create(userService.getCurrentUser("notfound@streamvault.local"))
+        StepVerifier.create(userService.getCurrentUser("notfound@streamvault.com"))
                 .verifyComplete();
     }
 
@@ -93,12 +93,12 @@ class UserServiceTest {
     void updateUser_Success() {
         UpdateUserRequest request = new UpdateUserRequest();
         request.setName("Updated Name");
-        request.setEmail("updated@streamvault.local");
+        request.setEmail("updated@streamvault.com");
 
         when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
         when(userRepository.save(any(User.class))).thenReturn(Mono.just(testUser));
 
-        StepVerifier.create(userService.updateUser("test@streamvault.local", request))
+        StepVerifier.create(userService.updateUser("test@streamvault.com", request))
                 .assertNext(response -> {
                     assertNotNull(response);
                 })
@@ -117,7 +117,7 @@ class UserServiceTest {
         when(passwordEncoder.encode("newPassword")).thenReturn("newHashedPassword");
         when(userRepository.save(any(User.class))).thenReturn(Mono.just(testUser));
 
-        StepVerifier.create(userService.changePassword("test@streamvault.local", request))
+        StepVerifier.create(userService.changePassword("test@streamvault.com", request))
                 .verifyComplete();
     }
 
@@ -131,7 +131,7 @@ class UserServiceTest {
         when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
         when(passwordEncoder.matches("wrongPassword", "hashedPassword")).thenReturn(false);
 
-        StepVerifier.create(userService.changePassword("test@streamvault.local", request))
+        StepVerifier.create(userService.changePassword("test@streamvault.com", request))
                 .expectError(IllegalArgumentException.class)
                 .verify();
     }

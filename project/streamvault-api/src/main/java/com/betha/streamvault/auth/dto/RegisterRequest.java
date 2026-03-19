@@ -12,8 +12,8 @@ public class RegisterRequest {
     @NotBlank(message = "El email es obligatorio")
     @Email(message = "Debe ser un email válido")
     @Pattern(
-            regexp = "^[a-zA-Z0-9._%+-]+@streamvault\\.local$",
-            message = "Solo se permiten emails del dominio @streamvault.local"
+            regexp = "^[a-zA-Z0-9._%+-]+@streamvault\\.com$",
+            message = "Solo se permiten emails del dominio @streamvault.com"
     )
     private String email;
 

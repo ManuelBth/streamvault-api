@@ -4,6 +4,7 @@ import com.betha.streamvault.auth.dto.RegisterRequest;
 import com.betha.streamvault.auth.dto.TokenResponse;
 import com.betha.streamvault.auth.model.RefreshToken;
 import com.betha.streamvault.auth.repository.RefreshTokenRepository;
+import com.betha.streamvault.notification.service.MailUserService;
 import com.betha.streamvault.user.model.User;
 import com.betha.streamvault.user.repository.UserRepository;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
@@ -28,6 +29,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final MailUserService mailUserService;
 
     public Mono<TokenResponse> register(RegisterRequest request) {
         log.info("Registering new user: {}", request.getEmail());
@@ -48,7 +50,11 @@ public class AuthService {
                             .build();
                     
                     return userRepository.save(user)
-                            .flatMap(savedUser -> generateTokens(savedUser));
+                            .flatMap(savedUser -> {
+                                // Create mail account automatically
+                                return mailUserService.createMailAccount(savedUser.getEmail(), request.getPassword())
+                                        .then(generateTokens(savedUser));
+                            });
                 });
     }
 

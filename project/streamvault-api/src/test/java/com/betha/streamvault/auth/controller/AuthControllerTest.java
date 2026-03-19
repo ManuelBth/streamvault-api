@@ -40,7 +40,7 @@ class AuthControllerTest {
     void register_Success() {
         // Given
         RegisterRequest request = new RegisterRequest();
-        request.setEmail("test@streamvault.local");
+        request.setEmail("test@streamvault.com");
         request.setPassword("password123");
         request.setName("Test User");
 
@@ -64,7 +64,7 @@ class AuthControllerTest {
     void login_Success() {
         // Given
         LoginRequest request = new LoginRequest();
-        request.setEmail("test@streamvault.local");
+        request.setEmail("test@streamvault.com");
         request.setPassword("password123");
 
         TokenResponse response = TokenResponse.of("access-token", "refresh-token", 900000);

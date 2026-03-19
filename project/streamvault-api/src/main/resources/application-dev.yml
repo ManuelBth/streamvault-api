@@ -11,11 +11,17 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   mail:
-    host: ${MAIL_HOST:localhost}
+    host: ${MAIL_HOST:192.168.80.22}
     port: ${MAIL_PORT:25}
+    username: ${MAIL_FROM:noreply@streamvault.local}
+    password: ${MAIL_PASSWORD:}
     properties:
-      mail.smtp.auth: false
-      mail.smtp.starttls.enable: false
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+            required: false
 
 app:
   jwt:

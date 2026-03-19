@@ -7,8 +7,12 @@ spring:
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD}
   mail:
-    username: ${MAIL_FROM:noreply@streamvault.local}
-    password: ${MAIL_PASSWORD:}
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:25}
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+      mail.smtp.starttls.required: false
   flyway:
     enabled: true
     baseline-on-migrate: true
