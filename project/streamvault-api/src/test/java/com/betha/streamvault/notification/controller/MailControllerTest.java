@@ -39,7 +39,8 @@ class MailControllerTest {
 
     private SendEmailRequest emailRequest;
     private UserResponse testUser;
-    private final String testUsername = "test@streamvault.local";
+    private final UUID testUserId = UUID.randomUUID();
+    private final String testEmail = "test@streamvault.local";
 
     @BeforeEach
     void setUp() {
@@ -49,8 +50,8 @@ class MailControllerTest {
         emailRequest.setBody("Test Body Content");
 
         testUser = UserResponse.builder()
-                .id(UUID.randomUUID())
-                .email(testUsername)
+                .id(testUserId)
+                .email(testEmail)
                 .name("Test User")
                 .role("USER")
                 .createdAt(LocalDateTime.now())
@@ -62,11 +63,11 @@ class MailControllerTest {
     @DisplayName("sendEmail - Should send email with user as sender")
     void sendEmail_Success() {
         // Given
-        when(userService.getCurrentUser(anyString())).thenReturn(Mono.just(testUser));
+        when(userService.getUserById(any(UUID.class))).thenReturn(Mono.just(testUser));
         when(emailService.sendEmail(any(SendEmailRequest.class))).thenReturn(Mono.empty());
 
         // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, testUsername);
+        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, testUserId);
 
         // Then
         StepVerifier.create(result)
@@ -80,10 +81,10 @@ class MailControllerTest {
     @DisplayName("sendEmail - Should return OK even when user not found (graceful degradation)")
     void sendEmail_UserNotFound() {
         // Given
-        when(userService.getCurrentUser(anyString())).thenReturn(Mono.empty());
+        when(userService.getUserById(any(UUID.class))).thenReturn(Mono.empty());
 
         // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, testUsername);
+        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, testUserId);
 
         // Then - returns 200 OK even if user not found (graceful degradation)
         StepVerifier.create(result)
@@ -97,12 +98,12 @@ class MailControllerTest {
     @DisplayName("sendEmail - Should handle error when email service fails")
     void sendEmail_Error() {
         // Given
-        when(userService.getCurrentUser(anyString())).thenReturn(Mono.just(testUser));
+        when(userService.getUserById(any(UUID.class))).thenReturn(Mono.just(testUser));
         when(emailService.sendEmail(any(SendEmailRequest.class)))
                 .thenReturn(Mono.error(new RuntimeException("SMTP Error")));
 
         // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, testUsername);
+        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, testUserId);
 
         // Then
         StepVerifier.create(result)
