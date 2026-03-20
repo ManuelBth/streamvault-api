@@ -11,7 +11,7 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   mail:
-    host: ${MAIL_HOST:192.168.80.22}
+    host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:25}
     username: ${MAIL_FROM:noreply@streamvault.local}
     password: ${MAIL_PASSWORD:}

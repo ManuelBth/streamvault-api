@@ -82,7 +82,7 @@ El backend es el núcleo de la plataforma **StreamVault**. Se implementa como un
 ```
 [Spring Boot :8080]
     │
-    ├── TCP :5432  ──►  PostgreSQL       (R2DBC reactivo)
+
     ├── SMTP :25   ──►  Postfix          (JavaMailSender)
     ├── HTTP :9000 ──►  MinIO            (MinIO SDK S3)
     └── UDP :53    ──►  BIND9 DNS        (resolución interna)
@@ -1066,10 +1066,10 @@ El proyecto utiliza **Spring Profiles** para gestionar diferentes configuracione
 
 ### 12.1 Perfiles disponibles
 
-| Perfil      | Uso                                          | Servicios                              |
-| ----------- | -------------------------------------------- | -------------------------------------- |
-| `dev`       | Desarrollo local                             | Docker Compose (localhost)             |
-| `prod`      | Producción en VMs                            | PostgreSQL, MinIO, Postfix remotos     |
+| Perfil | Uso               | Servicios                          |
+| ------ | ----------------- | ---------------------------------- |
+| `dev`  | Desarrollo local  | Docker Compose (localhost)         |
+| `prod` | Producción en VMs | PostgreSQL, MinIO, Postfix remotos |
 
 ### 12.2 Estructura de archivos de configuración
 
@@ -1104,13 +1104,13 @@ spring:
 
 app:
   jwt:
-    access-token-expiration: 900000    # 15 minutos en ms
-    refresh-token-expiration: 604800000  # 7 días en ms
+    access-token-expiration: 900000 # 15 minutos en ms
+    refresh-token-expiration: 604800000 # 7 días en ms
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://192.168.1.10}
   upload:
     temp-dir: /tmp/streamvault-uploads
-    max-file-size: 10737418240  # 10GB
+    max-file-size: 10737418240 # 10GB
   rate-limit:
     auth-requests-per-minute: 100
     mail-per-hour: 5
@@ -1211,8 +1211,8 @@ services:
   mailhog:
     image: mailhog/mailhog
     ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
 ```
 
 ```yaml
@@ -1223,7 +1223,7 @@ spring:
     port: 1025
 ```
 
-Acceder a MailHog: http://localhost:8025
+Acceder a MailHog: <http://localhost:8025>
 
 #### Producción (Postfix real)
 
@@ -1332,47 +1332,47 @@ services:
 
 ### Variables Comunes
 
-| Variable                  | Descripción                            | Ejemplo                               |
-| ------------------------- | -------------------------------------- | ------------------------------------- |
-| `SPRING_PROFILES_ACTIVE` | Perfil activo (dev o prod)             | `prod`                                |
-| `DB_HOST`                | Host PostgreSQL                        | `db.streamvault.local`               |
-| `DB_PORT`                | Puerto PostgreSQL                      | `5432`                                |
-| `DB_NAME`                | Nombre de la BD                        | `streamvault`                         |
-| `DB_USER`                | Usuario PostgreSQL                     | `streamvault`                         |
-| `DB_PASSWORD`            | Contraseña PostgreSQL                  | Secret — via `.env`                   |
-| `CORS_ALLOWED_ORIGINS`  | Origins permitidos para CORS           | `https://192.168.1.10`               |
+| Variable                 | Descripción                  | Ejemplo                |
+| ------------------------ | ---------------------------- | ---------------------- |
+| `SPRING_PROFILES_ACTIVE` | Perfil activo (dev o prod)   | `prod`                 |
+| `DB_HOST`                | Host PostgreSQL              | `db.streamvault.local` |
+| `DB_PORT`                | Puerto PostgreSQL            | `5432`                 |
+| `DB_NAME`                | Nombre de la BD              | `streamvault`          |
+| `DB_USER`                | Usuario PostgreSQL           | `streamvault`          |
+| `DB_PASSWORD`            | Contraseña PostgreSQL        | Secret — via `.env`    |
+| `CORS_ALLOWED_ORIGINS`   | Origins permitidos para CORS | `https://192.168.1.10` |
 
 ### Variables de Email (Postfix)
 
-| Variable                  | Descripción                            | Ejemplo                               |
-| ------------------------- | -------------------------------------- | ------------------------------------- |
-| `MAIL_HOST`              | Hostname SMTP                          | `mail.streamvault.local`             |
-| `MAIL_PORT`              | Puerto SMTP                            | `25`                                  |
-| `MAIL_FROM`              | Remitente del sistema                  | `noreply@streamvault.local`          |
-| `MAIL_PASSWORD`         | Contraseña SMTP                        | Vacío en red interna                 |
+| Variable        | Descripción           | Ejemplo                     |
+| --------------- | --------------------- | --------------------------- |
+| `MAIL_HOST`     | Hostname SMTP         | `mail.streamvault.local`    |
+| `MAIL_PORT`     | Puerto SMTP           | `25`                        |
+| `MAIL_FROM`     | Remitente del sistema | `noreply@streamvault.local` |
+| `MAIL_PASSWORD` | Contraseña SMTP       | Vacío en red interna        |
 
 ### Variables de MinIO
 
-| Variable                  | Descripción                            | Ejemplo                               |
-| ------------------------- | -------------------------------------- | ------------------------------------- |
-| `MINIO_URL`              | URL de MinIO                           | `http://minio.streamvault.local:9000` |
-| `MINIO_ACCESS_KEY`       | Access key MinIO                       | `minioadmin`                          |
-| `MINIO_SECRET_KEY`       | Secret key MinIO                       | Secret — via `.env`                   |
-| `MINIO_BUCKET_VIDEOS`    | Bucket de videos HLS                   | `streamvault-videos`                  |
-| `MINIO_BUCKET_THUMBNAILS`| Bucket de miniaturas                   | `streamvault-thumbnails`              |
+| Variable                  | Descripción          | Ejemplo                               |
+| ------------------------- | -------------------- | ------------------------------------- |
+| `MINIO_URL`               | URL de MinIO         | `http://minio.streamvault.local:9000` |
+| `MINIO_ACCESS_KEY`        | Access key MinIO     | `minioadmin`                          |
+| `MINIO_SECRET_KEY`        | Secret key MinIO     | Secret — via `.env`                   |
+| `MINIO_BUCKET_VIDEOS`     | Bucket de videos HLS | `streamvault-videos`                  |
+| `MINIO_BUCKET_THUMBNAILS` | Bucket de miniaturas | `streamvault-thumbnails`              |
 
 ### Variables de JWT
 
-| Variable                  | Descripción                            | Ejemplo                               |
-| ------------------------- | -------------------------------------- | ------------------------------------- |
-| `JWT_PUBLIC_KEY`         | Clave pública RSA para verificar JWT   | PEM — configurada directamente       |
-| `JWT_PRIVATE_KEY`        | Clave privada RSA-2048 para firmar JWT | PEM — configurada directamente       |
+| Variable          | Descripción                            | Ejemplo                        |
+| ----------------- | -------------------------------------- | ------------------------------ |
+| `JWT_PUBLIC_KEY`  | Clave pública RSA para verificar JWT   | PEM — configurada directamente |
+| `JWT_PRIVATE_KEY` | Clave privada RSA-2048 para firmar JWT | PEM — configurada directamente |
 
 ### Variables de SSL (Producción)
 
-| Variable                  | Descripción                            | Ejemplo                               |
-| ------------------------- | -------------------------------------- | ------------------------------------- |
-| `SSL_KEYSTORE_PASSWORD`  | Contraseña del keystore PKCS12         | Secret — via `.env`                   |
+| Variable                | Descripción                    | Ejemplo             |
+| ----------------------- | ------------------------------ | ------------------- |
+| `SSL_KEYSTORE_PASSWORD` | Contraseña del keystore PKCS12 | Secret — via `.env` |
 
 > **Nota para desarrollo:** En el perfil `dev`, las variables de SSL no son necesarias ya que se usa HTTP plano.
 
