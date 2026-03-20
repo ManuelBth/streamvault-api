@@ -18,11 +18,22 @@ public class MinioService {
     @Value("${minio.bucket-videos:streamvault-videos}")
     private String bucketVideos;
 
+    @Value("${minio.bucket-thumbnails:streamvault-thumbnails}")
+    private String bucketThumbnails;
+
     public String getPresignedUrl(String objectKey, Duration expiry) {
+        return getPresignedUrl(bucketVideos, objectKey, expiry);
+    }
+
+    public String getThumbnailPresignedUrl(String objectKey, Duration expiry) {
+        return getPresignedUrl(bucketThumbnails, objectKey, expiry);
+    }
+
+    private String getPresignedUrl(String bucket, String objectKey, Duration expiry) {
         try {
             return minioClient.getPresignedObjectUrl(
                     io.minio.GetPresignedObjectUrlArgs.builder()
-                            .bucket(bucketVideos)
+                            .bucket(bucket)
                             .object(objectKey)
                             .expiry((int) expiry.toSeconds())
                             .build());
@@ -33,9 +44,13 @@ public class MinioService {
     }
 
     public String uploadThumbnail(String key, byte[] data, String contentType) {
+        return uploadToBucket(bucketThumbnails, key, data, contentType);
+    }
+
+    private String uploadToBucket(String bucket, String key, byte[] data, String contentType) {
         try {
             var putObjectArgs = io.minio.PutObjectArgs.builder()
-                    .bucket(bucketVideos)
+                    .bucket(bucket)
                     .object(key)
                     .stream(new java.io.ByteArrayInputStream(data), data.length, -1)
                     .contentType(contentType)
@@ -43,8 +58,8 @@ public class MinioService {
             minioClient.putObject(putObjectArgs);
             return key;
         } catch (Exception e) {
-            log.error("Failed to upload thumbnail: {}", key, e);
-            throw new RuntimeException("Failed to upload thumbnail", e);
+            log.error("Failed to upload to bucket: {} key: {}", bucket, key, e);
+            throw new RuntimeException("Failed to upload", e);
         }
     }
 }
