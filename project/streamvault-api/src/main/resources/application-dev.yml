@@ -34,6 +34,7 @@ minio:
   secret-key: ${MINIO_SECRET_KEY:minioadmin}
   bucket-videos: ${MINIO_BUCKET_VIDEOS:streamvault-videos}
   bucket-thumbnails: ${MINIO_BUCKET_THUMBNAILS:streamvault-thumbnails}
+  presigned-expiry: 7200
 
 logging:
   level:
