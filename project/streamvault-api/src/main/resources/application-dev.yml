@@ -8,7 +8,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/streamvault
     username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:Junos123}
     driver-class-name: org.postgresql.Driver
   mail:
     host: ${MAIL_HOST:localhost}
