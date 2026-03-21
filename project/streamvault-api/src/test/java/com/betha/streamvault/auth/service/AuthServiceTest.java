@@ -1,6 +1,9 @@
 package com.betha.streamvault.auth.service;
 
 import com.betha.streamvault.auth.dto.RegisterRequest;
+import com.betha.streamvault.shared.exception.EmailAlreadyExistsException;
+import com.betha.streamvault.shared.exception.InvalidCredentialsException;
+import com.betha.streamvault.shared.exception.TokenExpiredException;
 import com.betha.streamvault.auth.dto.TokenResponse;
 import com.betha.streamvault.auth.model.RefreshToken;
 import com.betha.streamvault.auth.repository.RefreshTokenRepository;
@@ -108,6 +111,7 @@ class AuthServiceTest {
         // When & Then
         StepVerifier.create(authService.register(registerRequest))
                 .expectErrorMatches(throwable ->
+                        throwable instanceof EmailAlreadyExistsException &&
                         throwable.getMessage().equals("Email already registered"))
                 .verify();
     }
@@ -144,6 +148,7 @@ class AuthServiceTest {
         // When & Then
         StepVerifier.create(authService.login("test@streamvault.com", "wrongpassword"))
                 .expectErrorMatches(throwable ->
+                        throwable instanceof InvalidCredentialsException &&
                         throwable.getMessage().equals("Invalid credentials"))
                 .verify();
     }
@@ -211,6 +216,7 @@ class AuthServiceTest {
         // When & Then
         StepVerifier.create(authService.refresh("expired-token"))
                 .expectErrorMatches(throwable ->
+                        throwable instanceof TokenExpiredException &&
                         throwable.getMessage().equals("Refresh token expired or revoked"))
                 .verify();
     }
@@ -233,6 +239,7 @@ class AuthServiceTest {
         // When & Then
         StepVerifier.create(authService.refresh("revoked-token"))
                 .expectErrorMatches(throwable ->
+                        throwable instanceof TokenExpiredException &&
                         throwable.getMessage().equals("Refresh token expired or revoked"))
                 .verify();
     }

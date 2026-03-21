@@ -7,7 +7,11 @@ import com.betha.streamvault.auth.repository.RefreshTokenRepository;
 import com.betha.streamvault.notification.service.MailUserService;
 import com.betha.streamvault.user.model.User;
 import com.betha.streamvault.user.repository.UserRepository;
+import com.betha.streamvault.shared.exception.EmailAlreadyExistsException;
+import com.betha.streamvault.shared.exception.InvalidCredentialsException;
+import com.betha.streamvault.shared.exception.InvalidTokenException;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
+import com.betha.streamvault.shared.exception.TokenExpiredException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,7 +41,7 @@ public class AuthService {
         return userRepository.existsByEmail(request.getEmail())
                 .flatMap(exists -> {
                     if (exists) {
-                        return Mono.error(new RuntimeException("Email already registered"));
+                        return Mono.error(new EmailAlreadyExistsException("Email already registered"));
                     }
                     
                     User user = User.builder()
@@ -64,11 +68,11 @@ public class AuthService {
         return userRepository.findByEmail(email)
                 .flatMap(user -> {
                     if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-                        return Mono.error(new RuntimeException("Invalid credentials"));
+                        return Mono.error(new InvalidCredentialsException("Invalid credentials"));
                     }
                     return generateTokens(user);
                 })
-                .switchIfEmpty(Mono.error(new RuntimeException("Invalid credentials")));
+                .switchIfEmpty(Mono.error(new InvalidCredentialsException("Invalid credentials")));
     }
 
     public Mono<TokenResponse> refresh(String refreshToken) {
@@ -79,7 +83,7 @@ public class AuthService {
         return refreshTokenRepository.findByTokenHash(tokenHash)
                 .flatMap(token -> {
                     if (token.getRevoked() || token.getExpiresAt().isBefore(Instant.now())) {
-                        return Mono.error(new RuntimeException("Refresh token expired or revoked"));
+                        return Mono.error(new TokenExpiredException("Refresh token expired or revoked"));
                     }
                     
                     return userRepository.findById(token.getUserId())
@@ -90,7 +94,7 @@ public class AuthService {
                                         .flatMap(v -> generateTokens(user));
                             });
                 })
-                .switchIfEmpty(Mono.error(new RuntimeException("Invalid refresh token")));
+                .switchIfEmpty(Mono.error(new InvalidTokenException("Invalid refresh token")));
     }
 
     public Mono<Void> logout(String refreshToken) {

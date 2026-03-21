@@ -62,9 +62,11 @@
 **Autenticación:** Public
 
 **Headers:**
+
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "email": "usuario@streamvault.com",
@@ -73,13 +75,14 @@
 }
 ```
 
-| Campo     | Tipo   | Requerido | Descripción                                      |
-|-----------|--------|-----------|--------------------------------------------------|
-| email     | string | Sí        | Email con dominio @streamvault.com               |
-| password  | string | Sí        | Mínimo 8 caracteres                              |
-| name      | string | Sí        | Nombre completo del usuario                      |
+| Campo    | Tipo   | Requerido | Descripción                        |
+| -------- | ------ | --------- | ---------------------------------- |
+| email    | string | Sí        | Email con dominio @streamvault.com |
+| password | string | Sí        | Mínimo 8 caracteres                |
+| name     | string | Sí        | Nombre completo del usuario        |
 
 **Respuesta Exitosa (201):**
+
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -90,6 +93,7 @@
 ```
 
 **Respuesta de Error (400):**
+
 ```json
 {
   "status": 400,
@@ -108,9 +112,11 @@
 **Autenticación:** Public
 
 **Headers:**
+
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "email": "usuario@streamvault.com",
@@ -119,6 +125,7 @@
 ```
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -129,6 +136,7 @@
 ```
 
 **Respuesta de Error (401):**
+
 ```json
 {
   "status": 401,
@@ -147,9 +155,11 @@
 **Autenticación:** Public
 
 **Headers:**
+
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -157,6 +167,7 @@
 ```
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -167,6 +178,7 @@
 ```
 
 **Respuesta de Error (401):**
+
 ```json
 {
   "status": 401,
@@ -185,10 +197,12 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -196,6 +210,7 @@
 ```
 
 **Respuesta Exitosa (200):**
+
 ```json
 {}
 ```
@@ -209,9 +224,11 @@
 **Autenticación:** Public
 
 **Query Parameters:**
+
 - `token` (string): Token de confirmación enviado por email
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "message": "Email confirmed"
@@ -229,9 +246,11 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -244,6 +263,7 @@
 ```
 
 **Respuesta de Error (401):**
+
 ```json
 {
   "status": 401,
@@ -262,10 +282,12 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "name": "Nuevo Nombre",
@@ -273,12 +295,13 @@
 }
 ```
 
-| Campo | Tipo   | Requerido | Descripción                        |
-|-------|--------|-----------|------------------------------------|
-| name  | string | No        | Nombre (2-100 caracteres)         |
-| email | string | No        | Nuevo email válido                 |
+| Campo | Tipo   | Requerido | Descripción               |
+| ----- | ------ | --------- | ------------------------- |
+| name  | string | No        | Nombre (2-100 caracteres) |
+| email | string | No        | Nuevo email válido        |
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -299,10 +322,12 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "currentPassword": "contraseñaActual123",
@@ -310,17 +335,19 @@
 }
 ```
 
-| Campo            | Tipo   | Requerido | Descripción                |
-|------------------|--------|-----------|----------------------------|
-| currentPassword  | string | Sí        | Contraseña actual          |
-| newPassword      | string | Sí        | Nueva contraseña (mín. 8)  |
+| Campo           | Tipo   | Requerido | Descripción               |
+| --------------- | ------ | --------- | ------------------------- |
+| currentPassword | string | Sí        | Contraseña actual         |
+| newPassword     | string | Sí        | Nueva contraseña (mín. 8) |
 
 **Respuesta Exitosa (200):**
+
 ```json
 {}
 ```
 
 **Respuesta de Error (400):**
+
 ```json
 {
   "status": 400,
@@ -339,12 +366,15 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
+
 - `id` (UUID): ID único del usuario
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -357,6 +387,7 @@
 ```
 
 **Respuesta de Error (404):**
+
 ```json
 {
   "status": 404,
@@ -377,9 +408,11 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Respuesta Exitosa (200):**
+
 ```json
 [
   {
@@ -406,21 +439,24 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "name": "Nuevo Perfil"
 }
 ```
 
-| Campo | Tipo   | Requerido | Descripción                |
-|-------|--------|-----------|----------------------------|
-| name  | string | Sí        | Nombre del perfil (1-50)   |
+| Campo | Tipo   | Requerido | Descripción              |
+| ----- | ------ | --------- | ------------------------ |
+| name  | string | Sí        | Nombre del perfil (1-50) |
 
 **Respuesta Exitosa (201):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440003",
@@ -439,12 +475,15 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
+
 - `id` (UUID): ID único del perfil
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440001",
@@ -455,6 +494,7 @@
 ```
 
 **Respuesta de Error (403):**
+
 ```json
 {
   "status": 403,
@@ -473,13 +513,16 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Path Parameters:**
+
 - `id` (UUID): ID único del perfil
 
 **Request Body:**
+
 ```json
 {
   "name": "Nombre Actualizado"
@@ -487,6 +530,7 @@
 ```
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440001",
@@ -505,12 +549,15 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
+
 - `id` (UUID): ID único del perfil
 
 **Respuesta Exitosa (200):**
+
 ```json
 {}
 ```
@@ -526,10 +573,12 @@
 **Autenticación:** Public
 
 **Query Parameters:**
+
 - `page` (int): Número de página (default: 0)
 - `size` (int): Tamaño de página (default: 20)
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "content": [
@@ -571,9 +620,11 @@
 **Autenticación:** Public
 
 **Path Parameters:**
+
 - `id` (UUID): ID único del contenido
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440010",
@@ -601,6 +652,7 @@
 ```
 
 **Respuesta de Error (404):**
+
 ```json
 {
   "status": 404,
@@ -619,11 +671,13 @@
 **Autenticación:** Public
 
 **Query Parameters:**
+
 - `q` (string): Término de búsqueda
 - `page` (int): Número de página (default: 0)
 - `size` (int): Tamaño de página (default: 20)
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "content": [
@@ -660,9 +714,11 @@
 **Autenticación:** Public
 
 **Path Parameters:**
+
 - `id` (UUID): ID del contenido (serie)
 
 **Respuesta Exitosa (200):**
+
 ```json
 [
   {
@@ -687,9 +743,11 @@
 **Autenticación:** Public
 
 **Path Parameters:**
+
 - `seasonId` (UUID): ID de la temporada
 
 **Respuesta Exitosa (200):**
+
 ```json
 [
   {
@@ -728,6 +786,7 @@
 **Autenticación:** Public
 
 **Respuesta Exitosa (200):**
+
 ```json
 [
   {
@@ -758,10 +817,12 @@
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "title": "Nueva Película",
@@ -779,19 +840,20 @@
 }
 ```
 
-| Campo        | Tipo       | Requerido | Descripción                              |
-|--------------|------------|-----------|-------------------------------------------|
-| title        | string     | Sí        | Título del contenido                       |
-| description  | string     | No        | Descripción                              |
-| type         | enum       | Sí        | MOVIE o SERIES                            |
-| releaseYear  | int        | No        | Año de lanzamiento                        |
-| rating       | string     | No        | Clasificación (ej: PG-13, TV-MA)          |
-| thumbnailKey | string     | No        | Clave del thumbnail en MinIO              |
-| minioKey     | string     | No        | Clave del video en MinIO                  |
-| genreIds     | UUID[]     | No        | Lista de IDs de géneros                   |
-| status       | enum       | No        | DRAFT, PUBLISHED, ARCHIVED                |
+| Campo        | Tipo   | Requerido | Descripción                      |
+| ------------ | ------ | --------- | -------------------------------- |
+| title        | string | Sí        | Título del contenido             |
+| description  | string | No        | Descripción                      |
+| type         | enum   | Sí        | MOVIE o SERIES                   |
+| releaseYear  | int    | No        | Año de lanzamiento               |
+| rating       | string | No        | Clasificación (ej: PG-13, TV-MA) |
+| thumbnailKey | string | No        | Clave del thumbnail en MinIO     |
+| minioKey     | string | No        | Clave del video en MinIO         |
+| genreIds     | UUID[] | No        | Lista de IDs de géneros          |
+| status       | enum   | No        | DRAFT, PUBLISHED, ARCHIVED       |
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440010",
@@ -827,15 +889,18 @@
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Path Parameters:**
+
 - `id` (UUID): ID del contenido
 
 **Request Body:** (mismo que POST)
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440010",
@@ -862,9 +927,11 @@
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
+
 - `id` (UUID): ID del contenido
 
 **Respuesta Exitosa (204):** Sin contenido
@@ -880,12 +947,15 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
+
 - `contentId` (UUID): ID del contenido
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "url": "https://cdn.streamvault.com/stream/movie.mp4?token=abc123&expires=1705312800",
@@ -894,6 +964,7 @@
 ```
 
 **Respuesta de Error (403):**
+
 ```json
 {
   "status": 403,
@@ -904,6 +975,7 @@
 ```
 
 **Respuesta de Error (404):**
+
 ```json
 {
   "status": 404,
@@ -922,13 +994,16 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
+
 - `contentId` (UUID): ID del contenido (serie)
 - `episodeId` (UUID): ID del episodio
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "url": "https://cdn.streamvault.com/stream/s01e01.mp4?token=abc123&expires=1705312800",
@@ -937,6 +1012,7 @@
 ```
 
 **Respuesta de Error (403):**
+
 ```json
 {
   "status": 403,
@@ -957,9 +1033,11 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Respuesta Exitosa (200):**
+
 ```json
 [
   {
@@ -990,12 +1068,15 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
+
 - `id` (UUID): ID del registro de historial
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440050",
@@ -1016,10 +1097,12 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "episodeId": "550e8400-e29b-41d4-a716-446655440030",
@@ -1028,13 +1111,14 @@
 }
 ```
 
-| Campo        | Tipo    | Requerido | Descripción                          |
-|--------------|---------|-----------|--------------------------------------|
-| episodeId    | UUID    | Sí        | ID del episodio                      |
-| progressSec   | int     | No        | Segundos reproducidos (default: 0)   |
-| completed     | boolean | No        | Marcar como completado               |
+| Campo       | Tipo    | Requerido | Descripción                        |
+| ----------- | ------- | --------- | ---------------------------------- |
+| episodeId   | UUID    | Sí        | ID del episodio                    |
+| progressSec | int     | No        | Segundos reproducidos (default: 0) |
+| completed   | boolean | No        | Marcar como completado             |
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440050",
@@ -1055,13 +1139,16 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Path Parameters:**
+
 - `id` (UUID): ID del registro de historial
 
 **Request Body:**
+
 ```json
 {
   "progressSec": 1200,
@@ -1070,6 +1157,7 @@
 ```
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440050",
@@ -1090,12 +1178,15 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
+
 - `id` (UUID): ID del registro de historial
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440050",
@@ -1118,13 +1209,16 @@
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Query Parameters:**
+
 - `page` (int): Número de página (default: 0)
 - `size` (int): Tamaño de página (default: 20)
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "users": [
@@ -1160,12 +1254,15 @@
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
+
 - `id` (UUID): ID del usuario
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -1178,6 +1275,7 @@
 ```
 
 **Respuesta de Error (404):**
+
 ```json
 {
   "status": 404,
@@ -1196,13 +1294,16 @@
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
+
 - `Authorization: Bearer {token}`
 - `Content-Type: multipart/form-data`
 
 **Form Data:**
+
 - `file` (File): Archivo de imagen (JPEG, PNG, WebP)
 
 **Respuesta Exitosa (200):**
+
 ```json
 {
   "key": "thumbnails/uuid-1234.jpg",
@@ -1215,6 +1316,7 @@
 ```
 
 **Respuesta de Error (400):**
+
 ```json
 {
   "status": 400,
@@ -1228,16 +1330,16 @@
 
 ## Códigos de Error
 
-| Código | Estado           | Descripción                                          |
-|--------|------------------|------------------------------------------------------|
-| 200    | OK               | Solicitud exitosa                                   |
-| 201    | Created          | Recurso creado exitosamente                         |
-| 204    | No Content       | Solicitud exitosa sin contenido de respuesta        |
-| 400    | Bad Request      | Datos inválidos o faltantes                         |
-| 401    | Unauthorized     | Token inválido, expirado o no proporcionado        |
-| 403    | Forbidden        | Sin permisos para acceder al recurso               |
-| 404    | Not Found        | Recurso no encontrado                               |
-| 500    | Internal Error   | Error interno del servidor                          |
+| Código | Estado         | Descripción                                  |
+| ------ | -------------- | -------------------------------------------- |
+| 200    | OK             | Solicitud exitosa                            |
+| 201    | Created        | Recurso creado exitosamente                  |
+| 204    | No Content     | Solicitud exitosa sin contenido de respuesta |
+| 400    | Bad Request    | Datos inválidos o faltantes                  |
+| 401    | Unauthorized   | Token inválido, expirado o no proporcionado  |
+| 403    | Forbidden      | Sin permisos para acceder al recurso         |
+| 404    | Not Found      | Recurso no encontrado                        |
+| 500    | Internal Error | Error interno del servidor                   |
 
 ---
 
@@ -1357,4 +1459,4 @@ curl -X POST https://api.streamvault.com/api/v1/auth/logout \
 
 ---
 
-*Documentación generada automáticamente para StreamVault API v1.0*
+_Documentación generada automáticamente para StreamVault API v1.0_
