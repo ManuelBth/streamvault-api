@@ -1,9 +1,8 @@
 package com.betha.streamvault.user.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -12,34 +11,38 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("users")
+@Entity
+@Table(name = "users")
 public class User {
 
     @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column("email")
+    @Column(name = "email", unique = true, nullable = false)
     private String email;
 
-    @Column("password_hash")
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column("role")
+    @Column(name = "role", nullable = false)
     private String role;
 
-    @Column("name")
+    @Column(name = "name")
     private String name;
 
-    @Column("is_verified")
+    @Column(name = "is_verified")
     private Boolean isVerified;
 
-    @Column("created_at")
+    @Column(name = "created_at")
     private Instant createdAt;
 
-    @Column("updated_at")
+    @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @Column("subscription_id")
+    @Column(name = "subscription_id")
     private UUID subscriptionId;
 
     public static final String ROLE_USER = "ROLE_USER";

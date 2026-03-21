@@ -4,66 +4,54 @@ import com.betha.streamvault.admin.dto.AdminUserListResponse;
 import com.betha.streamvault.admin.dto.AdminUserResponse;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import com.betha.streamvault.user.model.User;
-import com.betha.streamvault.user.repository.UserRepository;
+import com.betha.streamvault.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.r2dbc.core.DatabaseClient;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZoneId;
+import java.util.List;
+import java.util.UUID;
 
 @Log4j2
 @Service
 @RequiredArgsConstructor
 public class AdminUserService {
 
-    private final UserRepository userRepository;
-    private final DatabaseClient databaseClient;
+    private final UserJpaRepository userJpaRepository;
 
-    public Mono<AdminUserListResponse> getAllUsers(int page, int size) {
-        int offset = page * size;
+    @Transactional(readOnly = true)
+    public AdminUserListResponse getAllUsers(int page, int size) {
+        Page<User> userPage = userJpaRepository.findAll(
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
 
-        Mono<Long> countMono = databaseClient.sql("SELECT COUNT(*) FROM users")
-                .map((row, metadata) -> row.get(0, Long.class))
-                .one();
+        List<AdminUserResponse> users = userPage.getContent().stream()
+                .map(this::toResponse)
+                .toList();
 
-        Mono<AdminUserListResponse> usersMono = databaseClient.sql("SELECT id, email, name, role, is_verified, created_at FROM users ORDER BY created_at DESC LIMIT :size OFFSET :offset")
-                .bind("size", size)
-                .bind("offset", offset)
-                .map((row, metadata) -> AdminUserResponse.builder()
-                        .id(row.get("id", java.util.UUID.class))
-                        .email(row.get("email", String.class))
-                        .name(row.get("name", String.class))
-                        .role(row.get("role", String.class))
-                        .isVerified(row.get("is_verified", Boolean.class))
-                        .createdAt(row.get("created_at", java.time.Instant.class) != null
-                                ? row.get("created_at", java.time.Instant.class).atZone(ZoneId.systemDefault()).toLocalDateTime()
-                                : null)
-                        .build())
-                .all()
-                .collectList()
-                .map(users -> AdminUserListResponse.builder()
-                        .users(users)
-                        .total(0L)
-                        .page(page)
-                        .size(size)
-                        .build());
+        AdminUserListResponse response = AdminUserListResponse.builder()
+                .users(users)
+                .total(userPage.getTotalElements())
+                .page(page)
+                .size(size)
+                .build();
 
-        return Mono.zip(countMono, usersMono)
-                .map(tuple -> {
-                    AdminUserListResponse response = tuple.getT2();
-                    response.setTotal(tuple.getT1());
-                    log.info("Admin retrieved {} users (page={}, size={})", response.getUsers().size(), page, size);
-                    return response;
-                });
+        log.info("Admin retrieved {} users (page={}, size={})", response.getUsers().size(), page, size);
+        return response;
     }
 
-    public Mono<AdminUserResponse> getUserById(java.util.UUID userId) {
-        return userRepository.findById(userId)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Usuario no encontrado")))
-                .map(this::toResponse)
-                .doOnSuccess(user -> log.info("Admin retrieved user: {}", userId));
+    @Transactional(readOnly = true)
+    public AdminUserResponse getUserById(UUID userId) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        
+        log.info("Admin retrieved user: {}", userId);
+        return toResponse(user);
     }
 
     private AdminUserResponse toResponse(User user) {

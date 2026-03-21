@@ -1,10 +1,8 @@
 package com.betha.streamvault.user.model;
 
-
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -13,22 +11,26 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("profiles")
+@Entity
+@Table(name = "profiles")
 public class Profile {
 
     @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column("user_id")
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column("name")
+    @Column(name = "name", nullable = false)
     private String name;
 
-    @Column("avatar_url")
+    @Column(name = "avatar_url")
     private String avatarUrl;
 
-    @Column("created_at")
+    @Column(name = "created_at")
     private Instant createdAt;
 
     public static final int MAX_PROFILES_PER_USER = 3;

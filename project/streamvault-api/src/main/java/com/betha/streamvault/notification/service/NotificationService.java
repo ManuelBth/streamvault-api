@@ -3,41 +3,47 @@ package com.betha.streamvault.notification.service;
 import com.betha.streamvault.notification.config.NotificationWebSocketHandler;
 import com.betha.streamvault.notification.dto.NotificationResponse;
 import com.betha.streamvault.notification.model.Notification;
-import com.betha.streamvault.notification.repository.NotificationRepository;
+import com.betha.streamvault.notification.repository.NotificationJpaRepository;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class NotificationService {
 
-    private final NotificationRepository notificationRepository;
+    private final NotificationJpaRepository notificationJpaRepository;
     private final NotificationWebSocketHandler webSocketHandler;
 
-    public NotificationService(NotificationRepository notificationRepository,
+    public NotificationService(NotificationJpaRepository notificationJpaRepository,
                               NotificationWebSocketHandler webSocketHandler) {
-        this.notificationRepository = notificationRepository;
+        this.notificationJpaRepository = notificationJpaRepository;
         this.webSocketHandler = webSocketHandler;
     }
 
-    public Flux<NotificationResponse> getNotifications(UUID userId) {
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .map(this::toResponse);
+    @Transactional(readOnly = true)
+    public List<NotificationResponse> getNotifications(UUID userId) {
+        return notificationJpaRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public Flux<NotificationResponse> getUnreadNotifications(UUID userId) {
-        return notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId)
-                .map(this::toResponse);
+    @Transactional(readOnly = true)
+    public List<NotificationResponse> getUnreadNotifications(UUID userId) {
+        return notificationJpaRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public Mono<Long> getUnreadCount(UUID userId) {
-        return notificationRepository.countByUserIdAndIsReadFalse(userId);
+    @Transactional(readOnly = true)
+    public long getUnreadCount(UUID userId) {
+        return notificationJpaRepository.countByUserIdAndIsReadFalse(userId);
     }
 
-    public Mono<NotificationResponse> createNotification(UUID userId, Notification.NotificationType type,
+    @Transactional
+    public NotificationResponse createNotification(UUID userId, Notification.NotificationType type,
                                                          String title, String message, UUID relatedId) {
         Notification notification = Notification.builder()
                 .userId(userId)
@@ -49,34 +55,35 @@ public class NotificationService {
                 .createdAt(Instant.now())
                 .build();
 
-        return notificationRepository.save(notification)
-                .map(this::toResponse)
-                .doOnSuccess(response -> webSocketHandler.sendNotificationToUser(userId.toString(), response));
+        Notification saved = notificationJpaRepository.save(notification);
+        NotificationResponse response = toResponse(saved);
+        webSocketHandler.sendNotificationToUser(userId.toString(), response);
+        return response;
     }
 
-    public Mono<Void> markAsRead(UUID notificationId, UUID userId) {
-        return notificationRepository.findById(notificationId)
-                .flatMap(notification -> {
-                    if (!notification.getUserId().equals(userId)) {
-                        return Mono.error(new IllegalArgumentException("Notificación no autorizada"));
-                    }
+    @Transactional
+    public void markAsRead(UUID notificationId, UUID userId) {
+        notificationJpaRepository.findById(notificationId).ifPresent(notification -> {
+            if (!notification.getUserId().equals(userId)) {
+                throw new IllegalArgumentException("Notificación no autorizada");
+            }
+            notification.setIsRead(true);
+            notificationJpaRepository.save(notification);
+        });
+    }
+
+    @Transactional
+    public void markAllAsRead(UUID userId) {
+        notificationJpaRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId)
+                .forEach(notification -> {
                     notification.setIsRead(true);
-                    return notificationRepository.save(notification);
-                })
-                .then();
+                    notificationJpaRepository.save(notification);
+                });
     }
 
-    public Mono<Void> markAllAsRead(UUID userId) {
-        return notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId)
-                .flatMap(notification -> {
-                    notification.setIsRead(true);
-                    return notificationRepository.save(notification);
-                })
-                .then();
-    }
-
-    public Mono<NotificationResponse> createBroadcastNotification(Notification.NotificationType type,
-                                                                  String title, String message, UUID relatedId) {
+    @Transactional
+    public NotificationResponse createBroadcastNotification(Notification.NotificationType type,
+                                                          String title, String message, UUID relatedId) {
         Notification notification = Notification.builder()
                 .userId(null)
                 .type(type)
@@ -87,9 +94,10 @@ public class NotificationService {
                 .createdAt(Instant.now())
                 .build();
 
-        return notificationRepository.save(notification)
-                .map(this::toResponse)
-                .doOnSuccess(response -> webSocketHandler.broadcastNotification(response));
+        Notification saved = notificationJpaRepository.save(notification);
+        NotificationResponse response = toResponse(saved);
+        webSocketHandler.broadcastNotification(response);
+        return response;
     }
 
     private NotificationResponse toResponse(Notification notification) {

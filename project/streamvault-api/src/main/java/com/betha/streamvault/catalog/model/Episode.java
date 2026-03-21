@@ -1,9 +1,8 @@
 package com.betha.streamvault.catalog.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -12,36 +11,40 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("episodes")
+@Entity
+@Table(name = "episodes")
 public class Episode {
 
     @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column("season_id")
+    @Column(name = "season_id", nullable = false)
     private UUID seasonId;
 
-    @Column("episode_number")
+    @Column(name = "episode_number", nullable = false)
     private Integer episodeNumber;
 
-    @Column("title")
+    @Column(name = "title")
     private String title;
 
-    @Column("description")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column("minio_key")
+    @Column(name = "minio_key")
     private String minioKey;
 
-    @Column("thumbnail_key")
+    @Column(name = "thumbnail_key")
     private String thumbnailKey;
 
-    @Column("duration_sec")
+    @Column(name = "duration_sec")
     private Integer durationSec;
 
-    @Column("status")
+    @Column(name = "status")
     private String status;
 
-    @Column("created_at")
+    @Column(name = "created_at")
     private Instant createdAt;
 }

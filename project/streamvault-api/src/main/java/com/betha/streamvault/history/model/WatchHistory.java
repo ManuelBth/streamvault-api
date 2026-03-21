@@ -1,9 +1,8 @@
 package com.betha.streamvault.history.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -12,21 +11,25 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("watch_history")
+@Entity
+@Table(name = "watch_history")
 public class WatchHistory {
 
     @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column("profile_id")
+    @Column(name = "profile_id", nullable = false)
     private UUID profileId;
 
-    @Column("episode_id")
+    @Column(name = "episode_id", nullable = false)
     private UUID episodeId;
 
-    @Column("progress_sec")
+    @Column(name = "progress_sec")
     private Integer progressSec;
 
-    @Column("watched_at")
+    @Column(name = "watched_at")
     private Instant watchedAt;
 }

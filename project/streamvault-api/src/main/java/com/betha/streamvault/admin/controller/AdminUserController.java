@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
@@ -23,21 +22,19 @@ public class AdminUserController {
     private final AdminUserService adminUserService;
 
     @GetMapping
-    public Mono<ResponseEntity<AdminUserListResponse>> getAllUsers(
+    public ResponseEntity<AdminUserListResponse> getAllUsers(
             @AuthenticationPrincipal String email,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         log.info("Admin {} requesting user list (page={}, size={})", email, page, size);
-        return adminUserService.getAllUsers(page, size)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(adminUserService.getAllUsers(page, size));
     }
 
     @GetMapping("/{id}")
-    public Mono<ResponseEntity<AdminUserResponse>> getUserById(
+    public ResponseEntity<AdminUserResponse> getUserById(
             @AuthenticationPrincipal String email,
             @PathVariable UUID id) {
         log.info("Admin {} requesting user details: {}", email, id);
-        return adminUserService.getUserById(id)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(adminUserService.getUserById(id));
     }
 }

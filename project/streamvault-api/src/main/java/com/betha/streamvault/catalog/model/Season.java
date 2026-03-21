@@ -1,9 +1,8 @@
 package com.betha.streamvault.catalog.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.util.UUID;
 
@@ -11,15 +10,19 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("seasons")
+@Entity
+@Table(name = "seasons")
 public class Season {
 
     @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column("content_id")
+    @Column(name = "content_id", nullable = false)
     private UUID contentId;
 
-    @Column("season_number")
+    @Column(name = "season_number", nullable = false)
     private Integer seasonNumber;
 }

@@ -8,9 +8,8 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.UUID;
 
 @Log4j2
@@ -22,66 +21,57 @@ public class CatalogController {
     private final CatalogService catalogService;
 
     @GetMapping
-    public Mono<ResponseEntity<PagedResponse<ContentResponse>>> getAllContent(
+    public ResponseEntity<PagedResponse<ContentResponse>> getAllContent(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return catalogService.getAllContent(page, size)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(catalogService.getAllContent(page, size));
     }
 
     @GetMapping("/{id}")
-    public Mono<ResponseEntity<ContentResponse>> getContentById(@PathVariable UUID id) {
-        return catalogService.getContentById(id)
-                .map(ResponseEntity::ok);
+    public ResponseEntity<ContentResponse> getContentById(@PathVariable UUID id) {
+        return ResponseEntity.ok(catalogService.getContentById(id));
     }
 
     @GetMapping("/search")
-    public Mono<ResponseEntity<PagedResponse<ContentResponse>>> searchContent(
+    public ResponseEntity<PagedResponse<ContentResponse>> searchContent(
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return catalogService.searchContent(q, page, size)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(catalogService.searchContent(q, page, size));
     }
 
     @GetMapping("/{id}/seasons")
-    public Mono<ResponseEntity<Flux<SeasonResponse>>> getSeasonsByContentId(@PathVariable UUID id) {
-        return catalogService.getSeasonsByContentId(id)
-                .collectList()
-                .map(content -> ResponseEntity.ok(Flux.fromIterable(content)));
+    public ResponseEntity<List<SeasonResponse>> getSeasonsByContentId(@PathVariable UUID id) {
+        return ResponseEntity.ok(catalogService.getSeasonsByContentId(id));
     }
 
     @GetMapping("/seasons/{seasonId}/episodes")
-    public Mono<ResponseEntity<Flux<EpisodeResponse>>> getEpisodesBySeasonId(@PathVariable UUID seasonId) {
-        return catalogService.getEpisodesBySeasonId(seasonId)
-                .collectList()
-                .map(content -> ResponseEntity.ok(Flux.fromIterable(content)));
+    public ResponseEntity<List<EpisodeResponse>> getEpisodesBySeasonId(@PathVariable UUID seasonId) {
+        return ResponseEntity.ok(catalogService.getEpisodesBySeasonId(seasonId));
     }
 
     @GetMapping("/genres")
-    public ResponseEntity<Flux<GenreResponse>> getAllGenres() {
+    public ResponseEntity<List<GenreResponse>> getAllGenres() {
         return ResponseEntity.ok(catalogService.getAllGenres());
     }
 
     @PostMapping
-    public Mono<ResponseEntity<ContentResponse>> createContent(
+    public ResponseEntity<ContentResponse> createContent(
             @AuthenticationPrincipal String email,
             @Valid @RequestBody ContentRequest request) {
-        return catalogService.createContent(request, email)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(catalogService.createContent(request, email));
     }
 
     @PutMapping("/{id}")
-    public Mono<ResponseEntity<ContentResponse>> updateContent(
+    public ResponseEntity<ContentResponse> updateContent(
             @PathVariable UUID id,
             @Valid @RequestBody ContentRequest request) {
-        return catalogService.updateContent(id, request)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(catalogService.updateContent(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public Mono<ResponseEntity<Void>> deleteContent(@PathVariable UUID id) {
-        return catalogService.deleteContent(id)
-                .thenReturn(ResponseEntity.noContent().<Void>build());
+    public ResponseEntity<Void> deleteContent(@PathVariable UUID id) {
+        catalogService.deleteContent(id);
+        return ResponseEntity.noContent().build();
     }
 }

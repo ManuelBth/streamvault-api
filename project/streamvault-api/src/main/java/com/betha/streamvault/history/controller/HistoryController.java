@@ -10,8 +10,8 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.UUID;
 
 @Log4j2
@@ -23,42 +23,36 @@ public class HistoryController {
     private final HistoryService historyService;
 
     @GetMapping
-    public Mono<ResponseEntity<?>> getHistory(@AuthenticationPrincipal String email) {
-        return historyService.getHistory(email)
-                .collectList()
-                .map(ResponseEntity::ok);
+    public ResponseEntity<List<WatchHistoryResponse>> getHistory(@AuthenticationPrincipal String email) {
+        return ResponseEntity.ok(historyService.getHistory(email));
     }
 
     @GetMapping("/{id}")
-    public Mono<ResponseEntity<WatchHistoryResponse>> getHistoryById(
+    public ResponseEntity<WatchHistoryResponse> getHistoryById(
             @AuthenticationPrincipal String email,
             @PathVariable UUID id) {
-        return historyService.getHistoryById(email, id)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(historyService.getHistoryById(email, id));
     }
 
     @PostMapping
-    public Mono<ResponseEntity<WatchHistoryResponse>> startTracking(
+    public ResponseEntity<WatchHistoryResponse> startTracking(
             @AuthenticationPrincipal String email,
             @Valid @RequestBody WatchHistoryRequest request) {
-        return historyService.startTracking(email, request)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(historyService.startTracking(email, request));
     }
 
     @PutMapping("/{id}/progress")
-    public Mono<ResponseEntity<WatchHistoryResponse>> updateProgress(
+    public ResponseEntity<WatchHistoryResponse> updateProgress(
             @AuthenticationPrincipal String email,
             @PathVariable UUID id,
             @Valid @RequestBody ProgressUpdateRequest request) {
-        return historyService.updateProgress(email, id, request)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(historyService.updateProgress(email, id, request));
     }
 
     @PutMapping("/{id}/completed")
-    public Mono<ResponseEntity<WatchHistoryResponse>> markAsCompleted(
+    public ResponseEntity<WatchHistoryResponse> markAsCompleted(
             @AuthenticationPrincipal String email,
             @PathVariable UUID id) {
-        return historyService.markAsCompleted(email, id)
-                .map(ResponseEntity::ok);
+        return ResponseEntity.ok(historyService.markAsCompleted(email, id));
     }
 }

@@ -1,9 +1,8 @@
 package com.betha.streamvault.auth.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -12,24 +11,28 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("refresh_tokens")
+@Entity
+@Table(name = "refresh_tokens")
 public class RefreshToken {
 
     @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column("user_id")
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column("token_hash")
+    @Column(name = "token_hash", nullable = false)
     private String tokenHash;
 
-    @Column("expires_at")
+    @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
-    @Column("revoked")
+    @Column(name = "revoked", nullable = false)
     private Boolean revoked;
 
-    @Column("created_at")
+    @Column(name = "created_at")
     private Instant createdAt;
 }

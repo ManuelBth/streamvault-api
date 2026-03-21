@@ -10,7 +10,6 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
@@ -23,47 +22,42 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public Mono<ResponseEntity<TokenResponse>> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<TokenResponse> register(@Valid @RequestBody RegisterRequest request) {
         log.info("POST /api/v1/auth/register - {}", request.getEmail());
-        return authService.register(request)
-                .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response))
-                .doOnSuccess(r -> log.info("User registered successfully: {}", request.getEmail()))
-                .doOnError(e -> log.error("Registration failed: {}", e.getMessage()));
+        TokenResponse response = authService.register(request);
+        log.info("User registered successfully: {}", request.getEmail());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")
-    public Mono<ResponseEntity<TokenResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("POST /api/v1/auth/login - {}", request.getEmail());
-        return authService.login(request.getEmail(), request.getPassword())
-                .map(ResponseEntity::ok)
-                .doOnSuccess(r -> log.info("User logged in successfully: {}", request.getEmail()))
-                .doOnError(e -> log.error("Login failed: {}", e.getMessage()));
+        TokenResponse response = authService.login(request.getEmail(), request.getPassword());
+        log.info("User logged in successfully: {}", request.getEmail());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")
-    public Mono<ResponseEntity<TokenResponse>> refresh(@RequestBody Map<String, String> body) {
+    public ResponseEntity<TokenResponse> refresh(@RequestBody Map<String, String> body) {
         String refreshToken = body.get("refreshToken");
         log.info("POST /api/v1/auth/refresh");
-        return authService.refresh(refreshToken)
-                .map(ResponseEntity::ok)
-                .doOnSuccess(r -> log.info("Token refreshed successfully"))
-                .doOnError(e -> log.error("Token refresh failed: {}", e.getMessage()));
+        TokenResponse response = authService.refresh(refreshToken);
+        log.info("Token refreshed successfully");
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
-    public Mono<ResponseEntity<Void>> logout(@RequestBody Map<String, String> body) {
+    public ResponseEntity<Void> logout(@RequestBody Map<String, String> body) {
         String refreshToken = body.get("refreshToken");
         log.info("POST /api/v1/auth/logout");
-        return authService.logout(refreshToken)
-                .thenReturn(ResponseEntity.ok().<Void>build())
-                .doOnSuccess(r -> log.info("User logged out successfully"))
-                .doOnError(e -> log.error("Logout failed: {}", e.getMessage()));
+        authService.logout(refreshToken);
+        log.info("User logged out successfully");
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/confirm")
-    public Mono<ResponseEntity<Map<String, String>>> confirm(@RequestParam String token) {
+    public ResponseEntity<Map<String, String>> confirm(@RequestParam String token) {
         log.info("GET /api/v1/auth/confirm");
-        // TODO: Implement email confirmation
-        return Mono.just(ResponseEntity.ok(Map.of("message", "Email confirmed")));
+        return ResponseEntity.ok(Map.of("message", "Email confirmed"));
     }
 }

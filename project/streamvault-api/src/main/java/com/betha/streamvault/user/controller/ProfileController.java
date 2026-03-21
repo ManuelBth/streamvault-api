@@ -2,7 +2,6 @@ package com.betha.streamvault.user.controller;
 
 import com.betha.streamvault.user.dto.ProfileRequest;
 import com.betha.streamvault.user.dto.ProfileResponse;
-import com.betha.streamvault.user.dto.UserResponse;
 import com.betha.streamvault.user.service.ProfileService;
 import com.betha.streamvault.user.service.UserService;
 import jakarta.validation.Valid;
@@ -12,8 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.UUID;
 
 @Log4j2
@@ -26,70 +25,81 @@ public class ProfileController {
     private final UserService userService;
 
     @GetMapping
-    public Mono<ResponseEntity<java.util.List<ProfileResponse>>> getProfiles(
+    public ResponseEntity<List<ProfileResponse>> getProfiles(
             @AuthenticationPrincipal String username) {
         
-        return userService.getCurrentUser(username)
-                .flatMap(user -> profileService.getProfilesByUserId(user.getId()).collectList())
-                .map(profiles -> ResponseEntity.ok(profiles));
+        var user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(profileService.getProfilesByUserId(user.getId()));
     }
 
     @PostMapping
-    public Mono<ResponseEntity<ProfileResponse>> createProfile(
+    public ResponseEntity<ProfileResponse> createProfile(
             @AuthenticationPrincipal String username,
             @Valid @RequestBody ProfileRequest request) {
         
-        return userService.getCurrentUser(username)
-                .flatMap(user -> profileService.createProfile(user.getId(), request))
-                .map(profile -> ResponseEntity.status(HttpStatus.CREATED).body(profile));
+        var user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            ProfileResponse profile = profileService.createProfile(user.getId(), request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(profile);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping("/{id}")
-    public Mono<ResponseEntity<ProfileResponse>> getProfile(
+    public ResponseEntity<ProfileResponse> getProfile(
             @AuthenticationPrincipal String username,
             @PathVariable UUID id) {
         
-        return userService.getCurrentUser(username)
-                .flatMap(user -> profileService.belongsToUser(id, user.getId())
-                        .flatMap(belongs -> {
-                            if (!belongs) {
-                                return Mono.error(new IllegalArgumentException("No autorizado"));
-                            }
-                            return profileService.getProfileById(id);
-                        }))
-                .map(ResponseEntity::ok);
+        var user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!profileService.belongsToUser(id, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return profileService.getProfileById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public Mono<ResponseEntity<ProfileResponse>> updateProfile(
+    public ResponseEntity<ProfileResponse> updateProfile(
             @AuthenticationPrincipal String username,
             @PathVariable UUID id,
             @Valid @RequestBody ProfileRequest request) {
         
-        return userService.getCurrentUser(username)
-                .flatMap(user -> profileService.belongsToUser(id, user.getId())
-                        .flatMap(belongs -> {
-                            if (!belongs) {
-                                return Mono.error(new IllegalArgumentException("No autorizado"));
-                            }
-                            return profileService.updateProfile(id, request);
-                        }))
-                .map(ResponseEntity::ok);
+        var user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!profileService.belongsToUser(id, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return profileService.updateProfile(id, request)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public Mono<ResponseEntity<Void>> deleteProfile(
+    public ResponseEntity<Void> deleteProfile(
             @AuthenticationPrincipal String username,
             @PathVariable UUID id) {
         
-        return userService.getCurrentUser(username)
-                .flatMap(user -> profileService.belongsToUser(id, user.getId())
-                        .flatMap(belongs -> {
-                            if (!belongs) {
-                                return Mono.error(new IllegalArgumentException("No autorizado"));
-                            }
-                            return profileService.deleteProfile(id);
-                        }))
-                .thenReturn(ResponseEntity.ok().<Void>build());
+        var user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!profileService.belongsToUser(id, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        profileService.deleteProfile(id);
+        return ResponseEntity.ok().build();
     }
 }

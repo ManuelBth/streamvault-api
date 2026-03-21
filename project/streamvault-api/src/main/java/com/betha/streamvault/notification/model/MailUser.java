@@ -1,13 +1,7 @@
 package com.betha.streamvault.notification.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.PersistenceCreator;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.Instant;
 
@@ -15,30 +9,33 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("mail_users")
+@Entity
+@Table(name = "mail_users")
 public class MailUser {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", updatable = false, nullable = false)
     private Long id;
 
-    @Column("email")
+    @Column(name = "email", unique = true, nullable = false)
     private String email;
 
-    @Column("password")
+    @Column(name = "password", nullable = false)
     private String password;
 
-    @Column("maildir")
+    @Column(name = "maildir", nullable = false)
     private String maildir;
 
-    @Column("quota")
+    @Column(name = "quota")
     private Long quota;
 
-    @Column("active")
+    @Column(name = "active", nullable = false)
     private Boolean active;
 
-    @Column("created_at")
+    @Column(name = "created_at")
     private Instant createdAt;
 
-    @Column("updated_at")
+    @Column(name = "updated_at")
     private Instant updatedAt;
 }

@@ -1,9 +1,8 @@
 package com.betha.streamvault.user.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -12,25 +11,29 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("subscriptions")
+@Entity
+@Table(name = "subscriptions")
 public class Subscription {
 
     @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column("user_id")
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column("plan")
+    @Column(name = "plan", nullable = false)
     private String plan;
 
-    @Column("started_at")
+    @Column(name = "started_at")
     private Instant startedAt;
 
-    @Column("expires_at")
+    @Column(name = "expires_at")
     private Instant expiresAt;
 
-    @Column("active")
+    @Column(name = "active", nullable = false)
     private Boolean active;
 
     public static final String PLAN_BASIC = "BASIC";

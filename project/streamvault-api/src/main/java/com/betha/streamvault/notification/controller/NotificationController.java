@@ -2,11 +2,11 @@ package com.betha.streamvault.notification.controller;
 
 import com.betha.streamvault.notification.dto.NotificationResponse;
 import com.betha.streamvault.notification.service.NotificationService;
+import com.betha.streamvault.user.dto.UserResponse;
 import com.betha.streamvault.user.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
@@ -25,43 +25,55 @@ public class NotificationController {
     }
 
     @GetMapping
-    public Mono<ResponseEntity<List<NotificationResponse>>> getNotifications(
+    public ResponseEntity<List<NotificationResponse>> getNotifications(
             @AuthenticationPrincipal String username) {
-        return userService.getCurrentUser(username)
-                .flatMap(user -> notificationService.getNotifications(user.getId()).collectList())
-                .map(ResponseEntity::ok);
+        UserResponse user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(notificationService.getNotifications(user.getId()));
     }
 
     @GetMapping("/unread")
-    public Mono<ResponseEntity<List<NotificationResponse>>> getUnreadNotifications(
+    public ResponseEntity<List<NotificationResponse>> getUnreadNotifications(
             @AuthenticationPrincipal String username) {
-        return userService.getCurrentUser(username)
-                .flatMap(user -> notificationService.getUnreadNotifications(user.getId()).collectList())
-                .map(ResponseEntity::ok);
+        UserResponse user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(notificationService.getUnreadNotifications(user.getId()));
     }
 
     @GetMapping("/unread/count")
-    public Mono<ResponseEntity<Map<String, Long>>> getUnreadCount(
+    public ResponseEntity<Map<String, Long>> getUnreadCount(
             @AuthenticationPrincipal String username) {
-        return userService.getCurrentUser(username)
-                .flatMap(user -> notificationService.getUnreadCount(user.getId())
-                        .map(count -> ResponseEntity.ok(Map.of("count", count))));
+        UserResponse user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(Map.of("count", notificationService.getUnreadCount(user.getId())));
     }
 
     @PutMapping("/{id}/read")
-    public Mono<ResponseEntity<Void>> markAsRead(
+    public ResponseEntity<Void> markAsRead(
             @AuthenticationPrincipal String username,
             @PathVariable UUID id) {
-        return userService.getCurrentUser(username)
-                .flatMap(user -> notificationService.markAsRead(id, user.getId()))
-                .thenReturn(ResponseEntity.ok().<Void>build());
+        UserResponse user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        notificationService.markAsRead(id, user.getId());
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/read-all")
-    public Mono<ResponseEntity<Void>> markAllAsRead(
+    public ResponseEntity<Void> markAllAsRead(
             @AuthenticationPrincipal String username) {
-        return userService.getCurrentUser(username)
-                .flatMap(user -> notificationService.markAllAsRead(user.getId()))
-                .thenReturn(ResponseEntity.ok().<Void>build());
+        UserResponse user = userService.getCurrentUser(username);
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        notificationService.markAllAsRead(user.getId());
+        return ResponseEntity.ok().build();
     }
 }

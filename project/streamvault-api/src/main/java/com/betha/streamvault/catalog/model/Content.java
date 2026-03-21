@@ -1,10 +1,8 @@
 package com.betha.streamvault.catalog.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Transient;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 import java.util.List;
@@ -14,43 +12,47 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("content")
+@Entity
+@Table(name = "content")
 public class Content {
 
     @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column("title")
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column("description")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column("type")
+    @Column(name = "type")
     private String type;
 
-    @Column("release_year")
+    @Column(name = "release_year")
     private Integer releaseYear;
 
-    @Column("rating")
+    @Column(name = "rating")
     private String rating;
 
-    @Column("thumbnail_key")
+    @Column(name = "thumbnail_key")
     private String thumbnailKey;
 
-    @Column("minio_base_key")
+    @Column(name = "minio_base_key")
     private String minioBaseKey;
 
-    @Column("status")
+    @Column(name = "status")
     private String status;
 
-    @Column("created_by")
+    @Column(name = "created_by")
     private UUID createdBy;
 
-    @Column("created_at")
+    @Column(name = "created_at")
     private Instant createdAt;
 
-    @Column("updated_at")
+    @Column(name = "updated_at")
     private Instant updatedAt;
 
     @Transient

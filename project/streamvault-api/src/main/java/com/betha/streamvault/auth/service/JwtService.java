@@ -3,10 +3,10 @@ package com.betha.streamvault.auth.service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import lombok.extern.log4j.Log4j2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -19,9 +19,10 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
 
-@Log4j2
 @Service
 public class JwtService {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 
     private final RSAPrivateKey privateKey;
     private final RSAPublicKey publicKey;

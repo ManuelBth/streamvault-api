@@ -6,100 +6,113 @@ import com.betha.streamvault.catalog.repository.*;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Service
 @RequiredArgsConstructor
 public class CatalogService {
 
-    private final ContentRepository contentRepository;
-    private final SeasonRepository seasonRepository;
-    private final EpisodeRepository episodeRepository;
-    private final GenreRepository genreRepository;
+    private final ContentJpaRepository contentJpaRepository;
+    private final SeasonJpaRepository seasonJpaRepository;
+    private final EpisodeJpaRepository episodeJpaRepository;
+    private final GenreJpaRepository genreJpaRepository;
 
-    public Mono<PagedResponse<ContentResponse>> getAllContent(int page, int size) {
-        return contentRepository.findByStatus(ContentStatus.PUBLISHED.name())
-                .count()
-                .flatMap(total -> contentRepository.findByStatus(ContentStatus.PUBLISHED.name())
-                        .sort(Comparator.comparing(Content::getCreatedAt).reversed())
-                        .skip((long) page * size)
-                        .limitRequest(size)
-                        .flatMap(this::toContentResponseMono)
-                        .collectList()
-                        .map(contentList -> PagedResponse.<ContentResponse>builder()
-                                .content(contentList)
-                                .page(page)
-                                .size(size)
-                                .totalElements(total)
-                                .totalPages((int) Math.ceil((double) total / size))
-                                .first(page == 0)
-                                .last(page >= Math.ceil((double) total / size) - 1)
-                                .build()));
-    }
+    @Transactional(readOnly = true)
+    public PagedResponse<ContentResponse> getAllContent(int page, int size) {
+        Page<Content> contentPage = contentJpaRepository.findAll(
+                PageRequest.of(page, size)
+        );
 
-    public Mono<ContentResponse> getContentById(UUID id) {
-        return contentRepository.findById(id)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Contenido no encontrado")))
-                .flatMap(this::toContentResponseMono);
-    }
-
-    public Mono<PagedResponse<ContentResponse>> searchContent(String query, int page, int size) {
-        return contentRepository.findByTitleContainingIgnoreCase(query)
+        List<ContentResponse> contentList = contentPage.getContent().stream()
                 .filter(c -> ContentStatus.PUBLISHED.name().equals(c.getStatus()))
-                .count()
-                .flatMap(total -> contentRepository.findByTitleContainingIgnoreCase(query)
-                        .filter(c -> ContentStatus.PUBLISHED.name().equals(c.getStatus()))
-                        .skip((long) page * size)
-                        .limitRequest(size)
-                        .flatMap(this::toContentResponseMono)
-                        .collectList()
-                        .map(contentList -> PagedResponse.<ContentResponse>builder()
-                                .content(contentList)
-                                .page(page)
-                                .size(size)
-                                .totalElements(total)
-                                .totalPages((int) Math.ceil((double) total / size))
-                                .first(page == 0)
-                                .last(page >= Math.ceil((double) total / size) - 1)
-                                .build()));
+                .sorted(Comparator.comparing(Content::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(this::toContentResponse)
+                .collect(Collectors.toList());
+
+        return PagedResponse.<ContentResponse>builder()
+                .content(contentList)
+                .page(page)
+                .size(size)
+                .totalElements(contentPage.getTotalElements())
+                .totalPages(contentPage.getTotalPages())
+                .first(page == 0)
+                .last(page >= contentPage.getTotalPages() - 1)
+                .build();
     }
 
-    public Flux<SeasonResponse> getSeasonsByContentId(UUID contentId) {
-        return contentRepository.existsById(contentId)
-                .flatMapMany(exists -> {
-                    if (!exists) {
-                        return Flux.error(new ResourceNotFoundException("Contenido no encontrado"));
-                    }
-                    return seasonRepository.findByContentIdOrderBySeasonNumberAsc(contentId);
-                })
-                .map(this::toSeasonResponse);
+    @Transactional(readOnly = true)
+    public ContentResponse getContentById(UUID id) {
+        Content content = contentJpaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Contenido no encontrado"));
+        return toContentResponse(content);
     }
 
-    public Flux<EpisodeResponse> getEpisodesBySeasonId(UUID seasonId) {
-        return seasonRepository.existsById(seasonId)
-                .flatMapMany(exists -> {
-                    if (!exists) {
-                        return Flux.error(new ResourceNotFoundException("Temporada no encontrada"));
-                    }
-                    return episodeRepository.findBySeasonIdOrderByEpisodeNumberAsc(seasonId);
-                })
-                .map(this::toEpisodeResponse);
+    @Transactional(readOnly = true)
+    public PagedResponse<ContentResponse> searchContent(String query, int page, int size) {
+        Page<Content> contentPage = contentJpaRepository.findAll(
+                PageRequest.of(page, size)
+        );
+
+        List<Content> filtered = contentPage.getContent().stream()
+                .filter(c -> c.getTitle() != null && c.getTitle().toLowerCase().contains(query.toLowerCase()))
+                .filter(c -> ContentStatus.PUBLISHED.name().equals(c.getStatus()))
+                .collect(Collectors.toList());
+
+        List<ContentResponse> contentList = filtered.stream()
+                .map(this::toContentResponse)
+                .collect(Collectors.toList());
+
+        return PagedResponse.<ContentResponse>builder()
+                .content(contentList)
+                .page(page)
+                .size(size)
+                .totalElements(filtered.size())
+                .totalPages((int) Math.ceil((double) filtered.size() / size))
+                .first(page == 0)
+                .last(page >= Math.ceil((double) filtered.size() / size) - 1)
+                .build();
     }
 
-    public Flux<GenreResponse> getAllGenres() {
-        return genreRepository.findAllByOrderByNameAsc()
-                .map(this::toGenreResponse);
+    @Transactional(readOnly = true)
+    public List<SeasonResponse> getSeasonsByContentId(UUID contentId) {
+        if (!contentJpaRepository.existsById(contentId)) {
+            throw new ResourceNotFoundException("Contenido no encontrado");
+        }
+        return seasonJpaRepository.findByContentIdOrderBySeasonNumberAsc(contentId).stream()
+                .map(this::toSeasonResponse)
+                .collect(Collectors.toList());
     }
 
-    public Mono<ContentResponse> createContent(ContentRequest request, String userEmail) {
+    @Transactional(readOnly = true)
+    public List<EpisodeResponse> getEpisodesBySeasonId(UUID seasonId) {
+        if (!seasonJpaRepository.existsById(seasonId)) {
+            throw new ResourceNotFoundException("Temporada no encontrada");
+        }
+        return episodeJpaRepository.findBySeasonIdOrderByEpisodeNumberAsc(seasonId).stream()
+                .map(this::toEpisodeResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<GenreResponse> getAllGenres() {
+        return genreJpaRepository.findAllByOrderByNameAsc().stream()
+                .map(this::toGenreResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public ContentResponse createContent(ContentRequest request, String userEmail) {
         Content content = new Content();
         content.setTitle(request.getTitle());
         content.setDescription(request.getDescription());
@@ -111,55 +124,37 @@ public class CatalogService {
         content.setStatus(request.getStatus() != null ? request.getStatus().name() : ContentStatus.DRAFT.name());
         content.setCreatedAt(Instant.now());
 
-        return contentRepository.save(content)
-                .flatMap(this::toContentResponseMono)
-                .doOnSuccess(c -> log.info("Content created: {}", c.getId()));
+        Content saved = contentJpaRepository.save(content);
+        log.info("Content created: {}", saved.getId());
+        return toContentResponse(saved);
     }
 
-    public Mono<ContentResponse> updateContent(UUID id, ContentRequest request) {
-        return contentRepository.findById(id)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Contenido no encontrado")))
-                .flatMap(content -> {
-                    if (request.getTitle() != null) {
-                        content.setTitle(request.getTitle());
-                    }
-                    if (request.getDescription() != null) {
-                        content.setDescription(request.getDescription());
-                    }
-                    if (request.getType() != null) {
-                        content.setType(request.getType().name());
-                    }
-                    if (request.getReleaseYear() != null) {
-                        content.setReleaseYear(request.getReleaseYear());
-                    }
-                    if (request.getRating() != null) {
-                        content.setRating(request.getRating());
-                    }
-                    if (request.getThumbnailKey() != null) {
-                        content.setThumbnailKey(request.getThumbnailKey());
-                    }
-                    if (request.getMinioKey() != null) {
-                        content.setMinioBaseKey(request.getMinioKey());
-                    }
-                    if (request.getStatus() != null) {
-                        content.setStatus(request.getStatus().name());
-                    }
-                    content.setUpdatedAt(Instant.now());
-                    return contentRepository.save(content);
-                })
-                .flatMap(this::toContentResponseMono)
-                .doOnSuccess(c -> log.info("Content updated: {}", c.getId()));
+    @Transactional
+    public ContentResponse updateContent(UUID id, ContentRequest request) {
+        Content content = contentJpaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Contenido no encontrado"));
+
+        if (request.getTitle() != null) content.setTitle(request.getTitle());
+        if (request.getDescription() != null) content.setDescription(request.getDescription());
+        if (request.getType() != null) content.setType(request.getType().name());
+        if (request.getReleaseYear() != null) content.setReleaseYear(request.getReleaseYear());
+        if (request.getRating() != null) content.setRating(request.getRating());
+        if (request.getThumbnailKey() != null) content.setThumbnailKey(request.getThumbnailKey());
+        if (request.getMinioKey() != null) content.setMinioBaseKey(request.getMinioKey());
+        if (request.getStatus() != null) content.setStatus(request.getStatus().name());
+        content.setUpdatedAt(Instant.now());
+
+        Content saved = contentJpaRepository.save(content);
+        log.info("Content updated: {}", saved.getId());
+        return toContentResponse(saved);
     }
 
-    public Mono<Void> deleteContent(UUID id) {
-        return contentRepository.findById(id)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Contenido no encontrado")))
-                .flatMap(contentRepository::delete)
-                .doOnSuccess(v -> log.info("Content deleted: {}", id));
-    }
-
-    private Mono<ContentResponse> toContentResponseMono(Content content) {
-        return Mono.just(toContentResponse(content));
+    @Transactional
+    public void deleteContent(UUID id) {
+        Content content = contentJpaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Contenido no encontrado"));
+        contentJpaRepository.delete(content);
+        log.info("Content deleted: {}", id);
     }
 
     private ContentResponse toContentResponse(Content content) {

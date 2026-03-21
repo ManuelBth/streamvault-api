@@ -4,36 +4,42 @@ import com.betha.streamvault.user.dto.ChangePasswordRequest;
 import com.betha.streamvault.user.dto.UpdateUserRequest;
 import com.betha.streamvault.user.dto.UserResponse;
 import com.betha.streamvault.user.model.User;
-import com.betha.streamvault.user.repository.UserRepository;
+import com.betha.streamvault.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Log4j2
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository userRepository;
+    private final UserJpaRepository userJpaRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public Mono<UserResponse> getCurrentUser(String email) {
-        return userRepository.findByEmail(email)
-                .map(this::toResponse);
+    @Transactional(readOnly = true)
+    public UserResponse getCurrentUser(String email) {
+        return userJpaRepository.findByEmail(email)
+                .map(this::toResponse)
+                .orElse(null);
     }
 
-    public Mono<UserResponse> getUserById(java.util.UUID id) {
-        return userRepository.findById(id)
-                .map(this::toResponse);
+    @Transactional(readOnly = true)
+    public UserResponse getUserById(UUID id) {
+        return userJpaRepository.findById(id)
+                .map(this::toResponse)
+                .orElse(null);
     }
 
-    public Mono<UserResponse> updateUser(String email, UpdateUserRequest request) {
-        return userRepository.findByEmail(email)
-                .flatMap(user -> {
+    @Transactional
+    public UserResponse updateUser(String email, UpdateUserRequest request) {
+        return userJpaRepository.findByEmail(email)
+                .map(user -> {
                     if (request.getName() != null) {
                         user.setName(request.getName());
                     }
@@ -41,22 +47,22 @@ public class UserService {
                         user.setEmail(request.getEmail());
                     }
                     user.setUpdatedAt(Instant.now());
-                    return userRepository.save(user);
+                    return userJpaRepository.save(user);
                 })
-                .map(this::toResponse);
+                .map(this::toResponse)
+                .orElse(null);
     }
 
-    public Mono<Void> changePassword(String email, ChangePasswordRequest request) {
-        return userRepository.findByEmail(email)
-                .flatMap(user -> {
-                    if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-                        return Mono.error(new IllegalArgumentException("Contraseña actual incorrecta"));
-                    }
-                    user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-                    user.setUpdatedAt(Instant.now());
-                    return userRepository.save(user)
-                            .then();
-                });
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        userJpaRepository.findByEmail(email).ifPresent(user -> {
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+                throw new IllegalArgumentException("Contraseña actual incorrecta");
+            }
+            user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+            user.setUpdatedAt(Instant.now());
+            userJpaRepository.save(user);
+        });
     }
 
     private UserResponse toResponse(User user) {

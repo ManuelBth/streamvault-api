@@ -1,9 +1,8 @@
 package com.betha.streamvault.notification.model;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -12,31 +11,36 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("notifications")
+@Entity
+@Table(name = "notifications")
 public class Notification {
 
     @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column("user_id")
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column("type")
+    @Column(name = "type", nullable = false)
+    @Enumerated(EnumType.STRING)
     private NotificationType type;
 
-    @Column("title")
+    @Column(name = "title")
     private String title;
 
-    @Column("message")
+    @Column(name = "message")
     private String message;
 
-    @Column("related_id")
+    @Column(name = "related_id")
     private UUID relatedId;
 
-    @Column("is_read")
+    @Column(name = "is_read", nullable = false)
     private Boolean isRead;
 
-    @Column("created_at")
+    @Column(name = "created_at")
     private Instant createdAt;
 
     public enum NotificationType {
