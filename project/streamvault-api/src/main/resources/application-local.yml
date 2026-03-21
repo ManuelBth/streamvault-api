@@ -1,12 +1,13 @@
 # Configuración local - NO COMMITEAR
-# Este archivo contiene credenciales locales
+# Este archivo contiene credenciales locales sensibles
 
 spring:
-  r2dbc:
-    url: r2dbc:postgresql://localhost:5432/streamvault
-    username: postgres
-    password: Junos123
   datasource:
     url: jdbc:postgresql://localhost:5432/streamvault
     username: postgres
     password: Junos123
+
+minio:
+  url: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin

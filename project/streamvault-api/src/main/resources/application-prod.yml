@@ -1,14 +1,34 @@
 spring:
-  r2dbc:
-    url: r2dbc:postgresql://${DB_HOST:db.streamvault.local}:${DB_PORT:5432}/${DB_NAME:streamvault}
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:db.streamvault.local}:${DB_PORT:5432}/${DB_NAME:streamvault}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
   mail:
     host: ${MAIL_HOST:mail.streamvault.local}
-    port: ${MAIL_PORT:25}
+    port: ${MAIL_PORT:587}
     username: ${MAIL_FROM:noreply@streamvault.local}
-    password: ${MAIL_PASSWORD:}
+    password: ${MAIL_PASSWORD}
     properties:
-      mail.smtp.auth: false
-      mail.smtp.starttls.enable: false
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
 
 app:
   jwt:
@@ -21,12 +41,16 @@ minio:
   secret-key: ${MINIO_SECRET_KEY}
   bucket-videos: ${MINIO_BUCKET_VIDEOS:streamvault-videos}
   bucket-thumbnails: ${MINIO_BUCKET_THUMBNAILS:streamvault-thumbnails}
+  presigned-expiry: 3600
+  thumbnail-presigned-url-expiry: 300
+
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
 
 logging:
   level:
     com.betha.streamvault: INFO
     org.springframework.security: WARN
-
-server:
-  ssl:
-    enabled: false
+    org.hibernate: WARN
