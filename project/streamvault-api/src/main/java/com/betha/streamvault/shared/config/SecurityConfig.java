@@ -1,5 +1,6 @@
 package com.betha.streamvault.shared.config;
 
+import com.betha.streamvault.auth.filter.JwtAuthenticationWebFilter;
 import com.betha.streamvault.auth.service.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +10,7 @@ import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -22,7 +24,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    public JwtAuthenticationWebFilter jwtAuthenticationWebFilter() {
+        return new JwtAuthenticationWebFilter(jwtService);
+    }
+
+    @Bean
+    public SecurityWebFilterChain securityWebFilterChain(
+            ServerHttpSecurity http, 
+            JwtAuthenticationWebFilter jwtAuthenticationWebFilter) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(cors -> {})
@@ -40,6 +49,7 @@ public class SecurityConfig {
                         .pathMatchers("/api/v1/mail/**").authenticated()
                         .anyExchange().authenticated()
                 )
+                .addFilterAt(jwtAuthenticationWebFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 

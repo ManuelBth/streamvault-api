@@ -1,13 +1,13 @@
 package com.betha.streamvault.auth.filter;
 
 import com.betha.streamvault.auth.service.JwtService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.stereotype.Component;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
@@ -15,11 +15,16 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
-@Log4j2
-@RequiredArgsConstructor
 public class JwtAuthenticationWebFilter implements WebFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationWebFilter.class);
+    public static final String CURRENT_USER_ATTR = "CURRENT_USER_EMAIL";
+
     private final JwtService jwtService;
+
+    public JwtAuthenticationWebFilter(JwtService jwtService) {
+        this.jwtService = jwtService;
+    }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -53,8 +58,17 @@ public class JwtAuthenticationWebFilter implements WebFilter {
                             List.of(new SimpleGrantedAuthority(role))
                         );
 
-                    return chain.filter(exchange)
-                        .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
+                    SecurityContextImpl context = new SecurityContextImpl(authentication);
+                    
+                    // Guardar el email en el atributo del exchange para que el controller pueda leerlo
+                    ServerWebExchange mutatedExchange = exchange.mutate()
+                        .request(exchange.getRequest().mutate()
+                            .header(CURRENT_USER_ATTR, email)
+                            .build())
+                        .build();
+                    
+                    return chain.filter(mutatedExchange)
+                        .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(context)));
                 }
             }
         } catch (Exception e) {

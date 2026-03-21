@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.web.server.context.WebSessionServerSecurityContextRepository;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
@@ -32,11 +33,13 @@ class JwtAuthenticationWebFilterTest {
     @Mock
     private WebFilterChain webFilterChain;
 
+    private WebSessionServerSecurityContextRepository securityContextRepository;
     private JwtAuthenticationWebFilter jwtAuthenticationWebFilter;
 
     @BeforeEach
     void setUp() {
-        jwtAuthenticationWebFilter = new JwtAuthenticationWebFilter(jwtService);
+        securityContextRepository = new WebSessionServerSecurityContextRepository();
+        jwtAuthenticationWebFilter = new JwtAuthenticationWebFilter(jwtService, securityContextRepository);
     }
 
     @Test
@@ -56,9 +59,9 @@ class JwtAuthenticationWebFilterTest {
         MockServerHttpRequest request = MockServerHttpRequest.get("/api/v1/catalog")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken)
                 .build();
-        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(webFilterChain.filter(exchange)).thenReturn(Mono.empty());
+        when(webFilterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
         // When
         Mono<Void> result = jwtAuthenticationWebFilter.filter(exchange, webFilterChain);
@@ -68,7 +71,7 @@ class JwtAuthenticationWebFilterTest {
                 .verifyComplete();
 
         // Verify the chain was called
-        verify(webFilterChain).filter(exchange);
+        verify(webFilterChain).filter(any(ServerWebExchange.class));
     }
 
     @Test
@@ -210,7 +213,7 @@ class JwtAuthenticationWebFilterTest {
                 .build();
         ServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(webFilterChain.filter(exchange)).thenReturn(Mono.empty());
+        when(webFilterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
         // When
         Mono<Void> result = jwtAuthenticationWebFilter.filter(exchange, webFilterChain);
@@ -219,7 +222,7 @@ class JwtAuthenticationWebFilterTest {
         StepVerifier.create(result)
                 .verifyComplete();
 
-        verify(webFilterChain).filter(exchange);
+        verify(webFilterChain).filter(any(ServerWebExchange.class));
     }
 
     @Test
@@ -239,9 +242,9 @@ class JwtAuthenticationWebFilterTest {
         MockServerHttpRequest request = MockServerHttpRequest.get("/api/v1/admin/users")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken)
                 .build();
-        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(webFilterChain.filter(exchange)).thenReturn(Mono.empty());
+        when(webFilterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
         // When
         Mono<Void> result = jwtAuthenticationWebFilter.filter(exchange, webFilterChain);
@@ -250,7 +253,7 @@ class JwtAuthenticationWebFilterTest {
         StepVerifier.create(result)
                 .verifyComplete();
 
-        verify(webFilterChain).filter(exchange);
+        verify(webFilterChain).filter(any(ServerWebExchange.class));
     }
 
     @Test
@@ -269,9 +272,9 @@ class JwtAuthenticationWebFilterTest {
         MockServerHttpRequest request = MockServerHttpRequest.get("/api/v1/catalog")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken)
                 .build();
-        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(webFilterChain.filter(exchange)).thenReturn(Mono.empty());
+        when(webFilterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
         // When
         Mono<Void> result = jwtAuthenticationWebFilter.filter(exchange, webFilterChain);
@@ -280,6 +283,6 @@ class JwtAuthenticationWebFilterTest {
         StepVerifier.create(result)
                 .verifyComplete();
 
-        verify(webFilterChain).filter(exchange);
+        verify(webFilterChain).filter(any(ServerWebExchange.class));
     }
 }
