@@ -1,28 +1,29 @@
 package com.betha.streamvault.catalog.model;
 
+import com.betha.streamvault.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 
-import java.time.Instant;
 import java.util.UUID;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "episodes")
-public class Episode {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Episode extends BaseEntity {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "season_id", nullable = false)
-    private UUID seasonId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "season_id", nullable = false)
+    private Season season;
 
     @Column(name = "episode_number", nullable = false)
     private Integer episodeNumber;
@@ -42,9 +43,7 @@ public class Episode {
     @Column(name = "duration_sec")
     private Integer durationSec;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status;
-
-    @Column(name = "created_at")
-    private Instant createdAt;
+    private EpisodeStatus status;
 }

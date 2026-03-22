@@ -1,5 +1,8 @@
 package com.betha.streamvault.history.model;
 
+import com.betha.streamvault.catalog.model.Episode;
+import com.betha.streamvault.shared.model.BaseEntity;
+import com.betha.streamvault.user.model.Profile;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -7,25 +10,27 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.Instant;
 import java.util.UUID;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "watch_history")
-public class WatchHistory {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class WatchHistory extends BaseEntity {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "profile_id", nullable = false)
-    private UUID profileId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_id", nullable = false)
+    private Profile profile;
 
-    @Column(name = "episode_id", nullable = false)
-    private UUID episodeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "episode_id", nullable = false)
+    private Episode episode;
 
     @Column(name = "progress_sec")
     private Integer progressSec;

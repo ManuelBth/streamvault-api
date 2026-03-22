@@ -1,31 +1,33 @@
 package com.betha.streamvault.notification.model;
 
+import com.betha.streamvault.shared.model.BaseEntity;
+import com.betha.streamvault.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 
-import java.time.Instant;
 import java.util.UUID;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "notifications")
-public class Notification {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Notification extends BaseEntity {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(name = "type", nullable = false)
     @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
     private NotificationType type;
 
     @Column(name = "title")
@@ -39,9 +41,6 @@ public class Notification {
 
     @Column(name = "is_read", nullable = false)
     private Boolean isRead;
-
-    @Column(name = "created_at")
-    private Instant createdAt;
 
     public enum NotificationType {
         NEW_CONTENT,

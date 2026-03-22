@@ -1,5 +1,7 @@
 package com.betha.streamvault.auth.model;
 
+import com.betha.streamvault.shared.model.BaseEntity;
+import com.betha.streamvault.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -7,22 +9,23 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.Instant;
 import java.util.UUID;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "refresh_tokens")
-public class RefreshToken {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class RefreshToken extends BaseEntity {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "token_hash", nullable = false)
     private String tokenHash;
@@ -32,7 +35,4 @@ public class RefreshToken {
 
     @Column(name = "revoked", nullable = false)
     private Boolean revoked;
-
-    @Column(name = "created_at")
-    private Instant createdAt;
 }

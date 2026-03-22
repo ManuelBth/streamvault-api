@@ -1,5 +1,6 @@
 package com.betha.streamvault.user.model;
 
+import com.betha.streamvault.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -7,25 +8,27 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.Instant;
 import java.util.UUID;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "subscriptions")
-public class Subscription {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Subscription extends BaseEntity {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "plan", nullable = false)
-    private String plan;
+    private SubscriptionPlan plan;
 
     @Column(name = "started_at")
     private Instant startedAt;
@@ -35,8 +38,4 @@ public class Subscription {
 
     @Column(name = "active", nullable = false)
     private Boolean active;
-
-    public static final String PLAN_BASIC = "BASIC";
-    public static final String PLAN_STANDARD = "STANDARD";
-    public static final String PLAN_PREMIUM = "PREMIUM";
 }

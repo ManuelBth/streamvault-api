@@ -1,19 +1,29 @@
 package com.betha.streamvault.user.model;
 
+import com.betha.streamvault.history.model.WatchHistory;
+import com.betha.streamvault.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 
-import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+/**
+ * Profile entity for user profiles within a subscription.
+ * Each user can have up to MAX_PROFILES_PER_USER profiles.
+ * 
+ * Uses @Getter @Setter instead of @Data to prevent Hibernate proxy issues.
+ */
 @Entity
 @Table(name = "profiles")
-public class Profile {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Profile extends BaseEntity {
 
     @Id
     @GeneratedValue(generator = "UUID")
@@ -21,8 +31,9 @@ public class Profile {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -30,8 +41,10 @@ public class Profile {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
-    @Column(name = "created_at")
-    private Instant createdAt;
+    // JPA Relationships
+    @OneToMany(mappedBy = "profile", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<WatchHistory> watchHistories = new ArrayList<>();
 
     public static final int MAX_PROFILES_PER_USER = 3;
 }
