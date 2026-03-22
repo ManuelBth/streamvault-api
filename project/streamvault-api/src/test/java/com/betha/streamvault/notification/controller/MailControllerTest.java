@@ -1,6 +1,5 @@
 package com.betha.streamvault.notification.controller;
 
-import com.betha.streamvault.auth.service.JwtService;
 import com.betha.streamvault.notification.dto.SendEmailRequest;
 import com.betha.streamvault.notification.service.EmailService;
 import com.betha.streamvault.user.dto.UserResponse;
@@ -9,13 +8,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -23,7 +19,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MailController Tests")
@@ -35,21 +31,17 @@ class MailControllerTest {
     @Mock
     private UserService userService;
 
-    @Mock
-    private JwtService jwtService;
-
-    @InjectMocks
     private MailController mailController;
 
     private SendEmailRequest emailRequest;
     private UserResponse testUser;
     private final UUID testUserId = UUID.randomUUID();
     private final String testEmail = "test@streamvault.com";
-    private final String validToken = "valid.jwt.token";
-    private final String authHeader = "Bearer " + validToken;
 
     @BeforeEach
     void setUp() {
+        mailController = new MailController(emailService, userService);
+        
         emailRequest = new SendEmailRequest();
         emailRequest.setTo("recipient@example.com");
         emailRequest.setSubject("Test Subject");
@@ -68,100 +60,34 @@ class MailControllerTest {
     @Test
     @DisplayName("sendEmail - Should send email with user as sender")
     void sendEmail_Success() {
-        // Given
-        when(jwtService.getUserIdFromToken(validToken)).thenReturn(testUserId);
-        when(userService.getUserById(testUserId)).thenReturn(Mono.just(testUser));
-        when(emailService.sendEmail(any(SendEmailRequest.class))).thenReturn(Mono.empty());
+        when(userService.getCurrentUser(testEmail)).thenReturn(testUser);
+        doNothing().when(emailService).sendEmail(any(SendEmailRequest.class));
 
-        // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, authHeader);
+        ResponseEntity<Void> response = mailController.sendEmail(emailRequest, testEmail);
 
-        // Then
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    @DisplayName("sendEmail - Should return 401 when no auth header")
-    void sendEmail_NoAuthHeader() {
-        // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, null);
-
-        // Then
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    @DisplayName("sendEmail - Should return 401 when invalid auth header format")
-    void sendEmail_InvalidAuthHeader() {
-        // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, "InvalidFormat");
-
-        // Then
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    @DisplayName("sendEmail - Should return 401 when token is invalid")
-    void sendEmail_InvalidToken() {
-        // Given
-        when(jwtService.getUserIdFromToken(anyString())).thenReturn(null);
-
-        // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, authHeader);
-
-        // Then
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-                })
-                .verifyComplete();
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(emailService).sendEmail(any(SendEmailRequest.class));
     }
 
     @Test
     @DisplayName("sendEmail - Should return 200 when user not found (graceful degradation)")
     void sendEmail_UserNotFound() {
-        // Given
-        when(jwtService.getUserIdFromToken(validToken)).thenReturn(testUserId);
-        when(userService.getUserById(testUserId)).thenReturn(Mono.empty());
+        when(userService.getCurrentUser(testEmail)).thenReturn(null);
 
-        // When - returns 200 OK even if user not found (graceful degradation)
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, authHeader);
+        ResponseEntity<Void> response = mailController.sendEmail(emailRequest, testEmail);
 
-        // Then
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                })
-                .verifyComplete();
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(emailService, never()).sendEmail(any());
     }
 
     @Test
-    @DisplayName("sendEmail - Should handle error when email service fails")
+    @DisplayName("sendEmail - Should propagate exception when email service fails")
     void sendEmail_Error() {
-        // Given
-        when(jwtService.getUserIdFromToken(validToken)).thenReturn(testUserId);
-        when(userService.getUserById(testUserId)).thenReturn(Mono.just(testUser));
-        when(emailService.sendEmail(any(SendEmailRequest.class)))
-                .thenReturn(Mono.error(new RuntimeException("SMTP Error")));
+        when(userService.getCurrentUser(testEmail)).thenReturn(testUser);
+        doThrow(new RuntimeException("SMTP Error")).when(emailService).sendEmail(any(SendEmailRequest.class));
 
-        // When
-        Mono<ResponseEntity<Void>> result = mailController.sendEmail(emailRequest, authHeader);
+        org.junit.jupiter.api.function.Executable executable = () -> mailController.sendEmail(emailRequest, testEmail);
 
-        // Then
-        StepVerifier.create(result)
-                .expectError(RuntimeException.class)
-                .verify();
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, executable);
     }
 }

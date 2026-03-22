@@ -10,7 +10,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import reactor.test.StepVerifier;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -38,37 +37,29 @@ class EmailServiceTest {
     @Test
     @DisplayName("sendEmail - Should send email successfully")
     void sendEmail_Success() {
-        // Given
         doNothing().when(mailSender).send(any(SimpleMailMessage.class));
 
-        // When & Then
-        StepVerifier.create(emailService.sendEmail(emailRequest))
-                .verifyComplete();
+        emailService.sendEmail(emailRequest);
 
         verify(mailSender).send(any(SimpleMailMessage.class));
     }
 
     @Test
-    @DisplayName("sendEmail - Should handle mail sender exception")
+    @DisplayName("sendEmail - Should propagate exception when mail sender fails")
     void sendEmail_Exception() {
-        // Given
         doThrow(new RuntimeException("SMTP error")).when(mailSender).send(any(SimpleMailMessage.class));
 
-        // When & Then
-        StepVerifier.create(emailService.sendEmail(emailRequest))
-                .expectError(RuntimeException.class)
-                .verify();
+        org.junit.jupiter.api.function.Executable executable = () -> emailService.sendEmail(emailRequest);
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, executable);
     }
 
     @Test
     @DisplayName("sendWelcomeEmail - Should send welcome email successfully")
     void sendWelcomeEmail_Success() {
-        // Given
         doNothing().when(mailSender).send(any(SimpleMailMessage.class));
 
-        // When & Then
-        StepVerifier.create(emailService.sendWelcomeEmail("user@example.com", "John Doe"))
-                .verifyComplete();
+        emailService.sendWelcomeEmail("user@example.com", "John Doe");
 
         verify(mailSender).send(any(SimpleMailMessage.class));
     }
@@ -76,13 +67,10 @@ class EmailServiceTest {
     @Test
     @DisplayName("sendPasswordResetEmail - Should send password reset email successfully")
     void sendPasswordResetEmail_Success() {
-        // Given
         doNothing().when(mailSender).send(any(SimpleMailMessage.class));
         String resetToken = "RESET-123456";
 
-        // When & Then
-        StepVerifier.create(emailService.sendPasswordResetEmail("user@example.com", resetToken))
-                .verifyComplete();
+        emailService.sendPasswordResetEmail("user@example.com", resetToken);
 
         verify(mailSender).send(any(SimpleMailMessage.class));
     }
@@ -90,16 +78,9 @@ class EmailServiceTest {
     @Test
     @DisplayName("sendNewContentNotification - Should send new content notification successfully")
     void sendNewContentNotification_Success() {
-        // Given
         doNothing().when(mailSender).send(any(SimpleMailMessage.class));
 
-        // When & Then
-        StepVerifier.create(emailService.sendNewContentNotification(
-                "user@example.com",
-                "New Movie Title",
-                "Movie"
-        ))
-                .verifyComplete();
+        emailService.sendNewContentNotification("user@example.com", "New Movie Title", "Movie");
 
         verify(mailSender).send(any(SimpleMailMessage.class));
     }
