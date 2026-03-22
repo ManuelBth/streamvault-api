@@ -35,7 +35,7 @@ public class CatalogService {
         );
 
         List<ContentResponse> contentList = contentPage.getContent().stream()
-                .filter(c -> ContentStatus.PUBLISHED.name().equals(c.getStatus()))
+                .filter(c -> c.getStatus() == ContentStatus.PUBLISHED)
                 .sorted(Comparator.comparing(Content::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(this::toContentResponse)
                 .collect(Collectors.toList());
@@ -60,16 +60,12 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public PagedResponse<ContentResponse> searchContent(String query, int page, int size) {
-        Page<Content> contentPage = contentJpaRepository.findAll(
-                PageRequest.of(page, size)
+        Page<Content> contentPage = contentJpaRepository.findByTitleContainingIgnoreCase(
+                query, PageRequest.of(page, size)
         );
 
-        List<Content> filtered = contentPage.getContent().stream()
-                .filter(c -> c.getTitle() != null && c.getTitle().toLowerCase().contains(query.toLowerCase()))
-                .filter(c -> ContentStatus.PUBLISHED.name().equals(c.getStatus()))
-                .collect(Collectors.toList());
-
-        List<ContentResponse> contentList = filtered.stream()
+        List<ContentResponse> contentList = contentPage.getContent().stream()
+                .filter(c -> c.getStatus() == ContentStatus.PUBLISHED)
                 .map(this::toContentResponse)
                 .collect(Collectors.toList());
 
@@ -77,29 +73,27 @@ public class CatalogService {
                 .content(contentList)
                 .page(page)
                 .size(size)
-                .totalElements(filtered.size())
-                .totalPages((int) Math.ceil((double) filtered.size() / size))
+                .totalElements(contentPage.getTotalElements())
+                .totalPages(contentPage.getTotalPages())
                 .first(page == 0)
-                .last(page >= Math.ceil((double) filtered.size() / size) - 1)
+                .last(page >= contentPage.getTotalPages() - 1)
                 .build();
     }
 
     @Transactional(readOnly = true)
     public List<SeasonResponse> getSeasonsByContentId(UUID contentId) {
-        if (!contentJpaRepository.existsById(contentId)) {
-            throw new ResourceNotFoundException("Contenido no encontrado");
-        }
-        return seasonJpaRepository.findByContentIdOrderBySeasonNumberAsc(contentId).stream()
+        Content content = contentJpaRepository.findById(contentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Contenido no encontrado"));
+        return seasonJpaRepository.findByContentOrderBySeasonNumberAsc(content).stream()
                 .map(this::toSeasonResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<EpisodeResponse> getEpisodesBySeasonId(UUID seasonId) {
-        if (!seasonJpaRepository.existsById(seasonId)) {
-            throw new ResourceNotFoundException("Temporada no encontrada");
-        }
-        return episodeJpaRepository.findBySeasonIdOrderByEpisodeNumberAsc(seasonId).stream()
+        Season season = seasonJpaRepository.findById(seasonId)
+                .orElseThrow(() -> new ResourceNotFoundException("Temporada no encontrada"));
+        return episodeJpaRepository.findBySeasonOrderByEpisodeNumberAsc(season).stream()
                 .map(this::toEpisodeResponse)
                 .collect(Collectors.toList());
     }
@@ -116,12 +110,12 @@ public class CatalogService {
         Content content = new Content();
         content.setTitle(request.getTitle());
         content.setDescription(request.getDescription());
-        content.setType(request.getType().name());
+        content.setType(request.getType());
         content.setReleaseYear(request.getReleaseYear());
         content.setRating(request.getRating());
         content.setThumbnailKey(request.getThumbnailKey());
         content.setMinioBaseKey(request.getMinioKey());
-        content.setStatus(request.getStatus() != null ? request.getStatus().name() : ContentStatus.DRAFT.name());
+        content.setStatus(request.getStatus() != null ? request.getStatus() : ContentStatus.DRAFT);
         content.setCreatedAt(Instant.now());
 
         Content saved = contentJpaRepository.save(content);
@@ -136,12 +130,12 @@ public class CatalogService {
 
         if (request.getTitle() != null) content.setTitle(request.getTitle());
         if (request.getDescription() != null) content.setDescription(request.getDescription());
-        if (request.getType() != null) content.setType(request.getType().name());
+        if (request.getType() != null) content.setType(request.getType());
         if (request.getReleaseYear() != null) content.setReleaseYear(request.getReleaseYear());
         if (request.getRating() != null) content.setRating(request.getRating());
         if (request.getThumbnailKey() != null) content.setThumbnailKey(request.getThumbnailKey());
         if (request.getMinioKey() != null) content.setMinioBaseKey(request.getMinioKey());
-        if (request.getStatus() != null) content.setStatus(request.getStatus().name());
+        if (request.getStatus() != null) content.setStatus(request.getStatus());
         content.setUpdatedAt(Instant.now());
 
         Content saved = contentJpaRepository.save(content);
@@ -162,12 +156,12 @@ public class CatalogService {
                 .id(content.getId())
                 .title(content.getTitle())
                 .description(content.getDescription())
-                .type(content.getType() != null ? ContentType.valueOf(content.getType()) : null)
+                .type(content.getType())
                 .releaseYear(content.getReleaseYear())
                 .rating(content.getRating())
                 .thumbnailKey(content.getThumbnailKey())
                 .minioKey(content.getMinioBaseKey())
-                .status(content.getStatus() != null ? ContentStatus.valueOf(content.getStatus()) : null)
+                .status(content.getStatus())
                 .createdAt(content.getCreatedAt() != null ? content.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .updatedAt(content.getUpdatedAt() != null ? content.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
@@ -176,7 +170,7 @@ public class CatalogService {
     private SeasonResponse toSeasonResponse(Season season) {
         return SeasonResponse.builder()
                 .id(season.getId())
-                .contentId(season.getContentId())
+                .contentId(season.getContent().getId())
                 .seasonNumber(season.getSeasonNumber())
                 .build();
     }
@@ -184,14 +178,14 @@ public class CatalogService {
     private EpisodeResponse toEpisodeResponse(Episode episode) {
         return EpisodeResponse.builder()
                 .id(episode.getId())
-                .seasonId(episode.getSeasonId())
+                .seasonId(episode.getSeason().getId())
                 .episodeNumber(episode.getEpisodeNumber())
                 .title(episode.getTitle())
                 .description(episode.getDescription())
                 .minioKey(episode.getMinioKey())
                 .thumbnailKey(episode.getThumbnailKey())
                 .durationSec(episode.getDurationSec())
-                .status(episode.getStatus() != null ? EpisodeStatus.valueOf(episode.getStatus()) : null)
+                .status(episode.getStatus())
                 .createdAt(episode.getCreatedAt() != null ? episode.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }

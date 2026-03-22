@@ -52,6 +52,6 @@ public class AuthController {
         log.info("POST /api/v1/auth/logout");
         authService.logout(refreshToken);
         log.info("User logged out successfully");
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

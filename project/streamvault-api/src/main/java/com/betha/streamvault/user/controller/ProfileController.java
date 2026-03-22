@@ -100,6 +100,6 @@ public class ProfileController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         profileService.deleteProfile(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

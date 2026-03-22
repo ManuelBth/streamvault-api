@@ -25,7 +25,6 @@ public class MailUserService {
         log.info("Creating mail account for: {}", email);
 
         String hashedPassword = hashPasswordSha256(password);
-        Instant now = Instant.now();
         String maildir = "streamvault.com/" + email.split("@")[0] + "/";
 
         MailUser mailUser = MailUser.builder()
@@ -34,8 +33,6 @@ public class MailUserService {
                 .maildir(maildir)
                 .quota(0L)
                 .active(true)
-                .createdAt(now)
-                .updatedAt(now)
                 .build();
 
         try {

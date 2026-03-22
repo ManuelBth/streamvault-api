@@ -6,6 +6,7 @@ import com.betha.streamvault.auth.model.RefreshToken;
 import com.betha.streamvault.auth.repository.RefreshTokenJpaRepository;
 import com.betha.streamvault.notification.service.MailUserService;
 import com.betha.streamvault.user.model.User;
+import com.betha.streamvault.user.model.UserRole;
 import com.betha.streamvault.user.repository.UserJpaRepository;
 import com.betha.streamvault.shared.exception.EmailAlreadyExistsException;
 import com.betha.streamvault.shared.exception.InvalidCredentialsException;
@@ -47,9 +48,8 @@ public class AuthService {
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
-                .role(User.ROLE_USER)
+                .role(UserRole.ROLE_USER)
                 .isVerified(false)
-                .createdAt(Instant.now())
                 .build();
         
         User savedUser = userJpaRepository.save(user);
@@ -90,8 +90,7 @@ public class AuthService {
             throw new TokenExpiredException("Refresh token expired or revoked");
         }
         
-        User user = userJpaRepository.findById(token.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = token.getUser();
         
         token.setRevoked(true);
         refreshTokenJpaRepository.save(token);
@@ -126,11 +125,10 @@ public class AuthService {
         String refreshToken = jwtService.generateRefreshToken(user.getId());
         
         RefreshToken refreshTokenEntity = RefreshToken.builder()
-                .userId(user.getId())
+                .user(user)
                 .tokenHash(hashToken(refreshToken))
                 .expiresAt(Instant.now().plusSeconds(604800))
                 .revoked(false)
-                .createdAt(Instant.now())
                 .build();
         
         refreshTokenJpaRepository.save(refreshTokenEntity);

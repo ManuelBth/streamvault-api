@@ -22,5 +22,7 @@ public interface ContentJpaRepository extends JpaRepository<Content, UUID> {
 
     List<Content> findByTitleContainingIgnoreCase(String title);
 
+    Page<Content> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+
     boolean existsByTitle(String title);
 }

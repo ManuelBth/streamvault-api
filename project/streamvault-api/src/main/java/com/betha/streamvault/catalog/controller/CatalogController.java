@@ -5,6 +5,7 @@ import com.betha.streamvault.catalog.service.CatalogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -59,7 +60,7 @@ public class CatalogController {
     public ResponseEntity<ContentResponse> createContent(
             @AuthenticationPrincipal String email,
             @Valid @RequestBody ContentRequest request) {
-        return ResponseEntity.ok(catalogService.createContent(request, email));
+        return ResponseEntity.status(HttpStatus.CREATED).body(catalogService.createContent(request, email));
     }
 
     @PutMapping("/{id}")

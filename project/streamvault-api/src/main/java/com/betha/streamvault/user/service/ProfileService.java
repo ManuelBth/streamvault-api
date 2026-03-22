@@ -3,7 +3,9 @@ package com.betha.streamvault.user.service;
 import com.betha.streamvault.user.dto.ProfileRequest;
 import com.betha.streamvault.user.dto.ProfileResponse;
 import com.betha.streamvault.user.model.Profile;
+import com.betha.streamvault.user.model.User;
 import com.betha.streamvault.user.repository.ProfileJpaRepository;
+import com.betha.streamvault.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -19,10 +21,13 @@ import java.util.UUID;
 public class ProfileService {
 
     private final ProfileJpaRepository profileJpaRepository;
+    private final UserJpaRepository userJpaRepository;
 
     @Transactional(readOnly = true)
     public List<ProfileResponse> getProfilesByUserId(UUID userId) {
-        return profileJpaRepository.findByUserId(userId).stream()
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        return profileJpaRepository.findByUserOrderByCreatedAtDesc(user).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -35,13 +40,15 @@ public class ProfileService {
 
     @Transactional
     public ProfileResponse createProfile(UUID userId, ProfileRequest request) {
-        long count = profileJpaRepository.countByUserId(userId);
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        long count = profileJpaRepository.countByUser(user);
         if (count >= Profile.MAX_PROFILES_PER_USER) {
             throw new IllegalArgumentException(
                     "Máximo de perfiles permitidos: " + Profile.MAX_PROFILES_PER_USER);
         }
         Profile profile = Profile.builder()
-                .userId(userId)
+                .user(user)
                 .name(request.getName())
                 .avatarUrl(null)
                 .build();
@@ -67,7 +74,7 @@ public class ProfileService {
     @Transactional(readOnly = true)
     public boolean belongsToUser(UUID profileId, UUID userId) {
         return profileJpaRepository.findById(profileId)
-                .map(profile -> profile.getUserId().equals(userId))
+                .map(profile -> profile.getUser().getId().equals(userId))
                 .orElse(false);
     }
 

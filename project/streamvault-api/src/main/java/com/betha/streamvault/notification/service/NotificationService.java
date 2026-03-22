@@ -4,6 +4,8 @@ import com.betha.streamvault.notification.config.NotificationWebSocketHandler;
 import com.betha.streamvault.notification.dto.NotificationResponse;
 import com.betha.streamvault.notification.model.Notification;
 import com.betha.streamvault.notification.repository.NotificationJpaRepository;
+import com.betha.streamvault.user.model.User;
+import com.betha.streamvault.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,37 +20,46 @@ public class NotificationService {
 
     private final NotificationJpaRepository notificationJpaRepository;
     private final NotificationWebSocketHandler webSocketHandler;
+    private final UserJpaRepository userJpaRepository;
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> getNotifications(UUID userId) {
-        return notificationJpaRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        return notificationJpaRepository.findByUserOrderByCreatedAtDesc(user).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> getUnreadNotifications(UUID userId) {
-        return notificationJpaRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId).stream()
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        return notificationJpaRepository.findByUserAndIsReadFalseOrderByCreatedAtDesc(user).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public long getUnreadCount(UUID userId) {
-        return notificationJpaRepository.countByUserIdAndIsReadFalse(userId);
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        return notificationJpaRepository.countByUserAndIsReadFalse(user);
     }
 
     @Transactional
     public NotificationResponse createNotification(UUID userId, Notification.NotificationType type,
                                                          String title, String message, UUID relatedId) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        
         Notification notification = Notification.builder()
-                .userId(userId)
+                .user(user)
                 .type(type)
                 .title(title)
                 .message(message)
                 .relatedId(relatedId)
                 .isRead(false)
-                .createdAt(Instant.now())
                 .build();
 
         Notification saved = notificationJpaRepository.save(notification);
@@ -60,7 +71,7 @@ public class NotificationService {
     @Transactional
     public void markAsRead(UUID notificationId, UUID userId) {
         notificationJpaRepository.findById(notificationId).ifPresent(notification -> {
-            if (!notification.getUserId().equals(userId)) {
+            if (!notification.getUser().getId().equals(userId)) {
                 throw new IllegalArgumentException("Notificación no autorizada");
             }
             notification.setIsRead(true);
@@ -70,7 +81,9 @@ public class NotificationService {
 
     @Transactional
     public void markAllAsRead(UUID userId) {
-        notificationJpaRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId)
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        notificationJpaRepository.findByUserAndIsReadFalseOrderByCreatedAtDesc(user)
                 .forEach(notification -> {
                     notification.setIsRead(true);
                     notificationJpaRepository.save(notification);
@@ -81,13 +94,12 @@ public class NotificationService {
     public NotificationResponse createBroadcastNotification(Notification.NotificationType type,
                                                           String title, String message, UUID relatedId) {
         Notification notification = Notification.builder()
-                .userId(null)
+                .user(null)
                 .type(type)
                 .title(title)
                 .message(message)
                 .relatedId(relatedId)
                 .isRead(false)
-                .createdAt(Instant.now())
                 .build();
 
         Notification saved = notificationJpaRepository.save(notification);

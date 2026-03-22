@@ -1,5 +1,6 @@
 package com.betha.streamvault.auth.service;
 
+import com.betha.streamvault.user.model.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -101,14 +102,14 @@ public class JwtService {
         return (RSAPublicKey) factory.generatePublic(spec);
     }
 
-    public String generateAccessToken(UUID userId, String email, String role) {
+    public String generateAccessToken(UUID userId, String email, UserRole role) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenExpiration);
 
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
-                .claim("role", role)
+                .claim("role", role.name())
                 .issuedAt(now)
                 .expiration(expiry)
                 .issuer("streamvault")

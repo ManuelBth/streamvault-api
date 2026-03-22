@@ -59,7 +59,7 @@ public class AdminUserService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
-                .role(user.getRole())
+                .role(user.getRole() != null ? user.getRole().name() : null)
                 .isVerified(user.getIsVerified())
                 .createdAt(user.getCreatedAt() != null
                         ? user.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime()

@@ -1,5 +1,7 @@
 package com.betha.streamvault.history.service;
 
+import com.betha.streamvault.catalog.model.Episode;
+import com.betha.streamvault.catalog.repository.EpisodeJpaRepository;
 import com.betha.streamvault.history.dto.ProgressUpdateRequest;
 import com.betha.streamvault.history.dto.WatchHistoryRequest;
 import com.betha.streamvault.history.dto.WatchHistoryResponse;
@@ -30,6 +32,7 @@ public class HistoryService {
     private final WatchHistoryJpaRepository watchHistoryJpaRepository;
     private final UserJpaRepository userJpaRepository;
     private final ProfileJpaRepository profileJpaRepository;
+    private final EpisodeJpaRepository episodeJpaRepository;
 
     @Transactional(readOnly = true)
     public User getActiveUser(String userEmail) {
@@ -44,7 +47,9 @@ public class HistoryService {
     }
 
     private Profile getProfileById(UUID userId, UUID profileId) {
-        List<Profile> profiles = profileJpaRepository.findByUserId(userId);
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        List<Profile> profiles = profileJpaRepository.findByUserOrderByCreatedAtDesc(user);
         if (profiles.isEmpty()) {
             throw new ResourceNotFoundException("No se encontraron perfiles para el usuario");
         }
@@ -58,7 +63,9 @@ public class HistoryService {
         if (providedProfileId != null) {
             return providedProfileId;
         }
-        List<Profile> profiles = profileJpaRepository.findByUserId(userId);
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        List<Profile> profiles = profileJpaRepository.findByUserOrderByCreatedAtDesc(user);
         if (profiles.isEmpty()) {
             throw new ResourceNotFoundException("No se encontraron perfiles para el usuario");
         }
@@ -69,7 +76,8 @@ public class HistoryService {
     public List<WatchHistoryResponse> getHistory(String userEmail, UUID profileId) {
         User user = getActiveUser(userEmail);
         UUID resolvedProfileId = resolveProfileId(user.getId(), profileId);
-        return watchHistoryJpaRepository.findByProfileIdOrderByWatchedAtDesc(resolvedProfileId).stream()
+        Profile profile = getProfileById(user.getId(), resolvedProfileId);
+        return watchHistoryJpaRepository.findByProfileOrderByWatchedAtDesc(profile).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -79,9 +87,11 @@ public class HistoryService {
         User user = getActiveUser(userEmail);
         UUID resolvedProfileId = resolveProfileId(user.getId(), profileId);
         Profile profile = getProfileById(user.getId(), resolvedProfileId);
+        Episode episode = episodeJpaRepository.findById(request.getEpisodeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Episodio no encontrado"));
         
         WatchHistory history = watchHistoryJpaRepository
-                .findByProfileIdAndEpisodeId(resolvedProfileId, request.getEpisodeId())
+                .findByProfileAndEpisode(profile, episode)
                 .orElse(null);
         
         if (history != null) {
@@ -90,7 +100,7 @@ public class HistoryService {
         } else {
             history = WatchHistory.builder()
                     .profile(profile)
-                    .episodeId(request.getEpisodeId())
+                    .episode(episode)
                     .progressSec(0)
                     .watchedAt(Instant.now())
                     .build();
