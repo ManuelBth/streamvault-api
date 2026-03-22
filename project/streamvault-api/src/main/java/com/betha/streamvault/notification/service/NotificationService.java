@@ -4,6 +4,7 @@ import com.betha.streamvault.notification.config.NotificationWebSocketHandler;
 import com.betha.streamvault.notification.dto.NotificationResponse;
 import com.betha.streamvault.notification.model.Notification;
 import com.betha.streamvault.notification.repository.NotificationJpaRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,16 +13,11 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationJpaRepository notificationJpaRepository;
     private final NotificationWebSocketHandler webSocketHandler;
-
-    public NotificationService(NotificationJpaRepository notificationJpaRepository,
-                              NotificationWebSocketHandler webSocketHandler) {
-        this.notificationJpaRepository = notificationJpaRepository;
-        this.webSocketHandler = webSocketHandler;
-    }
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> getNotifications(UUID userId) {

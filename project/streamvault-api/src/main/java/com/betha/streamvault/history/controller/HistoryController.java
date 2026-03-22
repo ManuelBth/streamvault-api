@@ -23,36 +23,42 @@ public class HistoryController {
     private final HistoryService historyService;
 
     @GetMapping
-    public ResponseEntity<List<WatchHistoryResponse>> getHistory(@AuthenticationPrincipal String email) {
-        return ResponseEntity.ok(historyService.getHistory(email));
+    public ResponseEntity<List<WatchHistoryResponse>> getHistory(
+            @AuthenticationPrincipal String email,
+            @RequestParam(required = false) UUID profileId) {
+        return ResponseEntity.ok(historyService.getHistory(email, profileId));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<WatchHistoryResponse> getHistoryById(
             @AuthenticationPrincipal String email,
+            @RequestParam(required = false) UUID profileId,
             @PathVariable UUID id) {
-        return ResponseEntity.ok(historyService.getHistoryById(email, id));
+        return ResponseEntity.ok(historyService.getHistoryById(email, profileId, id));
     }
 
     @PostMapping
     public ResponseEntity<WatchHistoryResponse> startTracking(
             @AuthenticationPrincipal String email,
+            @RequestParam(required = false) UUID profileId,
             @Valid @RequestBody WatchHistoryRequest request) {
-        return ResponseEntity.ok(historyService.startTracking(email, request));
+        return ResponseEntity.ok(historyService.startTracking(email, profileId, request));
     }
 
     @PutMapping("/{id}/progress")
     public ResponseEntity<WatchHistoryResponse> updateProgress(
             @AuthenticationPrincipal String email,
+            @RequestParam(required = false) UUID profileId,
             @PathVariable UUID id,
             @Valid @RequestBody ProgressUpdateRequest request) {
-        return ResponseEntity.ok(historyService.updateProgress(email, id, request));
+        return ResponseEntity.ok(historyService.updateProgress(email, profileId, id, request));
     }
 
     @PutMapping("/{id}/completed")
     public ResponseEntity<WatchHistoryResponse> markAsCompleted(
             @AuthenticationPrincipal String email,
+            @RequestParam(required = false) UUID profileId,
             @PathVariable UUID id) {
-        return ResponseEntity.ok(historyService.markAsCompleted(email, id));
+        return ResponseEntity.ok(historyService.markAsCompleted(email, profileId, id));
     }
 }

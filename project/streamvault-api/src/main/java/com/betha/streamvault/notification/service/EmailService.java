@@ -1,19 +1,17 @@
 package com.betha.streamvault.notification.service;
 
 import com.betha.streamvault.notification.dto.SendEmailRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class EmailService {
 
     private final JavaMailSender mailSender;
     private final String fromEmail = "noreply@streamvault.com";
-
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
 
     public void sendEmail(SendEmailRequest request) {
         SimpleMailMessage message = new SimpleMailMessage();

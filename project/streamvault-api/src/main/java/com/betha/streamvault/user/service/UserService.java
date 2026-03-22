@@ -1,5 +1,6 @@
 package com.betha.streamvault.user.service;
 
+import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import com.betha.streamvault.user.dto.ChangePasswordRequest;
 import com.betha.streamvault.user.dto.UpdateUserRequest;
 import com.betha.streamvault.user.dto.UserResponse;
@@ -26,14 +27,14 @@ public class UserService {
     public UserResponse getCurrentUser(String email) {
         return userJpaRepository.findByEmail(email)
                 .map(this::toResponse)
-                .orElse(null);
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     }
 
     @Transactional(readOnly = true)
     public UserResponse getUserById(UUID id) {
         return userJpaRepository.findById(id)
                 .map(this::toResponse)
-                .orElse(null);
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + id));
     }
 
     @Transactional
@@ -50,19 +51,20 @@ public class UserService {
                     return userJpaRepository.save(user);
                 })
                 .map(this::toResponse)
-                .orElse(null);
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     }
 
     @Transactional
     public void changePassword(String email, ChangePasswordRequest request) {
-        userJpaRepository.findByEmail(email).ifPresent(user -> {
-            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-                throw new IllegalArgumentException("Contraseña actual incorrecta");
-            }
-            user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-            user.setUpdatedAt(Instant.now());
-            userJpaRepository.save(user);
-        });
+        User user = userJpaRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("Contraseña actual incorrecta");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(Instant.now());
+        userJpaRepository.save(user);
     }
 
     private UserResponse toResponse(User user) {

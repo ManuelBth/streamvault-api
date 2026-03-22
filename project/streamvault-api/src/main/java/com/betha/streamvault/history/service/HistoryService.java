@@ -25,6 +25,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class HistoryService {
 
+    private static final int COMPLETED_MARKER = -1;
+
     private final WatchHistoryJpaRepository watchHistoryJpaRepository;
     private final UserJpaRepository userJpaRepository;
     private final ProfileJpaRepository profileJpaRepository;
@@ -38,41 +40,48 @@ public class HistoryService {
     @Transactional(readOnly = true)
     public Profile getActiveProfileById(UUID profileId, String userEmail) {
         User user = getActiveUser(userEmail);
-        List<Profile> profiles = profileJpaRepository.findByUserId(user.getId());
+        return getProfileById(user.getId(), profileId);
+    }
+
+    private Profile getProfileById(UUID userId, UUID profileId) {
+        List<Profile> profiles = profileJpaRepository.findByUserId(userId);
         if (profiles.isEmpty()) {
             throw new ResourceNotFoundException("No se encontraron perfiles para el usuario");
         }
-        Profile firstProfile = profiles.get(0);
-        if (!firstProfile.getId().equals(profileId)) {
-            throw new ResourceNotFoundException("Perfil no encontrado");
+        return profiles.stream()
+                .filter(p -> p.getId().equals(profileId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil no encontrado"));
+    }
+
+    private UUID resolveProfileId(UUID userId, UUID providedProfileId) {
+        if (providedProfileId != null) {
+            return providedProfileId;
         }
-        return firstProfile;
+        List<Profile> profiles = profileJpaRepository.findByUserId(userId);
+        if (profiles.isEmpty()) {
+            throw new ResourceNotFoundException("No se encontraron perfiles para el usuario");
+        }
+        return profiles.get(0).getId();
     }
 
     @Transactional(readOnly = true)
-    public List<WatchHistoryResponse> getHistory(String userEmail) {
+    public List<WatchHistoryResponse> getHistory(String userEmail, UUID profileId) {
         User user = getActiveUser(userEmail);
-        List<Profile> profiles = profileJpaRepository.findByUserId(user.getId());
-        if (profiles.isEmpty()) {
-            throw new ResourceNotFoundException("No se encontraron perfiles para el usuario");
-        }
-        UUID profileId = profiles.get(0).getId();
-        return watchHistoryJpaRepository.findByProfileIdOrderByWatchedAtDesc(profileId).stream()
+        UUID resolvedProfileId = resolveProfileId(user.getId(), profileId);
+        return watchHistoryJpaRepository.findByProfileIdOrderByWatchedAtDesc(resolvedProfileId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional
-    public WatchHistoryResponse startTracking(String userEmail, WatchHistoryRequest request) {
+    public WatchHistoryResponse startTracking(String userEmail, UUID profileId, WatchHistoryRequest request) {
         User user = getActiveUser(userEmail);
-        List<Profile> profiles = profileJpaRepository.findByUserId(user.getId());
-        if (profiles.isEmpty()) {
-            throw new ResourceNotFoundException("No se encontraron perfiles para el usuario");
-        }
-        UUID profileId = profiles.get(0).getId();
+        UUID resolvedProfileId = resolveProfileId(user.getId(), profileId);
+        Profile profile = getProfileById(user.getId(), resolvedProfileId);
         
         WatchHistory history = watchHistoryJpaRepository
-                .findByProfileIdAndEpisodeId(profileId, request.getEpisodeId())
+                .findByProfileIdAndEpisodeId(resolvedProfileId, request.getEpisodeId())
                 .orElse(null);
         
         if (history != null) {
@@ -80,7 +89,7 @@ public class HistoryService {
             history.setWatchedAt(Instant.now());
         } else {
             history = WatchHistory.builder()
-                    .profileId(profileId)
+                    .profile(profile)
                     .episodeId(request.getEpisodeId())
                     .progressSec(0)
                     .watchedAt(Instant.now())
@@ -93,18 +102,14 @@ public class HistoryService {
     }
 
     @Transactional
-    public WatchHistoryResponse updateProgress(String userEmail, UUID historyId, ProgressUpdateRequest request) {
+    public WatchHistoryResponse updateProgress(String userEmail, UUID profileId, UUID historyId, ProgressUpdateRequest request) {
         User user = getActiveUser(userEmail);
-        List<Profile> profiles = profileJpaRepository.findByUserId(user.getId());
-        if (profiles.isEmpty()) {
-            throw new ResourceNotFoundException("No se encontraron perfiles para el usuario");
-        }
-        UUID profileId = profiles.get(0).getId();
+        UUID resolvedProfileId = resolveProfileId(user.getId(), profileId);
         
         WatchHistory history = watchHistoryJpaRepository.findById(historyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Historial no encontrado"));
         
-        if (!history.getProfileId().equals(profileId)) {
+        if (!history.getProfile().getId().equals(resolvedProfileId)) {
             throw new ResourceNotFoundException("Historial no encontrado");
         }
         
@@ -117,22 +122,18 @@ public class HistoryService {
     }
 
     @Transactional
-    public WatchHistoryResponse markAsCompleted(String userEmail, UUID historyId) {
+    public WatchHistoryResponse markAsCompleted(String userEmail, UUID profileId, UUID historyId) {
         User user = getActiveUser(userEmail);
-        List<Profile> profiles = profileJpaRepository.findByUserId(user.getId());
-        if (profiles.isEmpty()) {
-            throw new ResourceNotFoundException("No se encontraron perfiles para el usuario");
-        }
-        UUID profileId = profiles.get(0).getId();
+        UUID resolvedProfileId = resolveProfileId(user.getId(), profileId);
         
         WatchHistory history = watchHistoryJpaRepository.findById(historyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Historial no encontrado"));
         
-        if (!history.getProfileId().equals(profileId)) {
+        if (!history.getProfile().getId().equals(resolvedProfileId)) {
             throw new ResourceNotFoundException("Historial no encontrado");
         }
         
-        history.setProgressSec(Integer.MAX_VALUE);
+        history.setProgressSec(COMPLETED_MARKER);
         history.setWatchedAt(Instant.now());
         
         WatchHistory saved = watchHistoryJpaRepository.save(history);
@@ -141,18 +142,14 @@ public class HistoryService {
     }
 
     @Transactional(readOnly = true)
-    public WatchHistoryResponse getHistoryById(String userEmail, UUID historyId) {
+    public WatchHistoryResponse getHistoryById(String userEmail, UUID profileId, UUID historyId) {
         User user = getActiveUser(userEmail);
-        List<Profile> profiles = profileJpaRepository.findByUserId(user.getId());
-        if (profiles.isEmpty()) {
-            throw new ResourceNotFoundException("No se encontraron perfiles para el usuario");
-        }
-        UUID profileId = profiles.get(0).getId();
+        UUID resolvedProfileId = resolveProfileId(user.getId(), profileId);
         
         WatchHistory history = watchHistoryJpaRepository.findById(historyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Historial no encontrado"));
         
-        if (!history.getProfileId().equals(profileId)) {
+        if (!history.getProfile().getId().equals(resolvedProfileId)) {
             throw new ResourceNotFoundException("Historial no encontrado");
         }
         
@@ -162,10 +159,10 @@ public class HistoryService {
     private WatchHistoryResponse toResponse(WatchHistory history) {
         return WatchHistoryResponse.builder()
                 .id(history.getId())
-                .profileId(history.getProfileId())
-                .episodeId(history.getEpisodeId())
+                .profileId(history.getProfile().getId())
+                .episodeId(history.getEpisode().getId())
                 .progressSec(history.getProgressSec())
-                .completed(history.getProgressSec() != null && history.getProgressSec() >= Integer.MAX_VALUE / 2)
+                .completed(history.getProgressSec() != null && history.getProgressSec() == COMPLETED_MARKER)
                 .watchedAt(history.getWatchedAt() != null
                         ? history.getWatchedAt().atZone(ZoneId.systemDefault()).toLocalDateTime()
                         : null)
