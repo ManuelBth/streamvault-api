@@ -12,17 +12,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,14 +32,16 @@ class HistoryControllerTest {
     private HistoryController historyController;
 
     private WatchHistoryResponse testHistoryResponse;
+    private UUID profileId;
 
     @BeforeEach
     void setUp() {
         historyController = new HistoryController(historyService);
+        profileId = UUID.randomUUID();
 
         testHistoryResponse = WatchHistoryResponse.builder()
                 .id(UUID.randomUUID())
-                .profileId(UUID.randomUUID())
+                .profileId(profileId)
                 .episodeId(UUID.randomUUID())
                 .progressSec(120)
                 .completed(false)
@@ -53,39 +52,38 @@ class HistoryControllerTest {
     @Test
     @DisplayName("GET /history - Should return watch history")
     void getHistory_Success() {
-        when(historyService.getHistory("test@streamvault.com")).thenReturn(Flux.just(testHistoryResponse));
+        when(historyService.getHistory(eq("test@streamvault.com"), any())).thenReturn(List.of(testHistoryResponse));
 
-        Mono<ResponseEntity<?>> result = historyController.getHistory("test@streamvault.com");
+        ResponseEntity<List<WatchHistoryResponse>> result = historyController.getHistory("test@streamvault.com", profileId);
 
-        ResponseEntity<?> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody()).hasSize(1);
     }
 
     @Test
     @DisplayName("GET /history - Should return empty list when no history")
     void getHistory_Empty() {
-        when(historyService.getHistory("test@streamvault.com")).thenReturn(Flux.empty());
+        when(historyService.getHistory(eq("test@streamvault.com"), any())).thenReturn(List.of());
 
-        Mono<ResponseEntity<?>> result = historyController.getHistory("test@streamvault.com");
+        ResponseEntity<List<WatchHistoryResponse>> result = historyController.getHistory("test@streamvault.com", profileId);
 
-        ResponseEntity<?> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody()).isEmpty();
     }
 
     @Test
     @DisplayName("GET /history/{id} - Should return history by ID")
     void getHistoryById_Success() {
         UUID historyId = testHistoryResponse.getId();
-        when(historyService.getHistoryById("test@streamvault.com", historyId)).thenReturn(Mono.just(testHistoryResponse));
+        when(historyService.getHistoryById(eq("test@streamvault.com"), any(), eq(historyId))).thenReturn(testHistoryResponse);
 
-        Mono<ResponseEntity<WatchHistoryResponse>> result = historyController.getHistoryById("test@streamvault.com", historyId);
+        ResponseEntity<WatchHistoryResponse> result = historyController.getHistoryById("test@streamvault.com", profileId, historyId);
 
-        ResponseEntity<WatchHistoryResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertEquals(historyId, entity.getBody().getId());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().getId()).isEqualTo(historyId);
     }
 
     @Test
@@ -95,13 +93,12 @@ class HistoryControllerTest {
                 .episodeId(UUID.randomUUID())
                 .build();
 
-        when(historyService.startTracking("test@streamvault.com", request)).thenReturn(Mono.just(testHistoryResponse));
+        when(historyService.startTracking(eq("test@streamvault.com"), any(), any())).thenReturn(testHistoryResponse);
 
-        Mono<ResponseEntity<WatchHistoryResponse>> result = historyController.startTracking("test@streamvault.com", request);
+        ResponseEntity<WatchHistoryResponse> result = historyController.startTracking("test@streamvault.com", profileId, request);
 
-        ResponseEntity<WatchHistoryResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(result.getBody()).isNotNull();
     }
 
     @Test
@@ -114,21 +111,20 @@ class HistoryControllerTest {
 
         WatchHistoryResponse updatedResponse = WatchHistoryResponse.builder()
                 .id(historyId)
-                .profileId(testHistoryResponse.getProfileId())
+                .profileId(profileId)
                 .episodeId(testHistoryResponse.getEpisodeId())
                 .progressSec(300)
                 .completed(false)
                 .watchedAt(LocalDateTime.now())
                 .build();
 
-        when(historyService.updateProgress("test@streamvault.com", historyId, request)).thenReturn(Mono.just(updatedResponse));
+        when(historyService.updateProgress(eq("test@streamvault.com"), any(), eq(historyId), any())).thenReturn(updatedResponse);
 
-        Mono<ResponseEntity<WatchHistoryResponse>> result = historyController.updateProgress("test@streamvault.com", historyId, request);
+        ResponseEntity<WatchHistoryResponse> result = historyController.updateProgress("test@streamvault.com", profileId, historyId, request);
 
-        ResponseEntity<WatchHistoryResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertEquals(300, entity.getBody().getProgressSec());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().getProgressSec()).isEqualTo(300);
     }
 
     @Test
@@ -138,43 +134,19 @@ class HistoryControllerTest {
 
         WatchHistoryResponse completedResponse = WatchHistoryResponse.builder()
                 .id(historyId)
-                .profileId(testHistoryResponse.getProfileId())
+                .profileId(profileId)
                 .episodeId(testHistoryResponse.getEpisodeId())
-                .progressSec(Integer.MAX_VALUE)
+                .progressSec(-1)
                 .completed(true)
                 .watchedAt(LocalDateTime.now())
                 .build();
 
-        when(historyService.markAsCompleted("test@streamvault.com", historyId)).thenReturn(Mono.just(completedResponse));
+        when(historyService.markAsCompleted(eq("test@streamvault.com"), any(), eq(historyId))).thenReturn(completedResponse);
 
-        Mono<ResponseEntity<WatchHistoryResponse>> result = historyController.markAsCompleted("test@streamvault.com", historyId);
+        ResponseEntity<WatchHistoryResponse> result = historyController.markAsCompleted("test@streamvault.com", profileId, historyId);
 
-        ResponseEntity<WatchHistoryResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertTrue(entity.getBody().getCompleted());
-    }
-
-    @Test
-    @DisplayName("GET /history/{id} - Should return completed history")
-    void getHistoryById_Completed() {
-        UUID historyId = UUID.randomUUID();
-        WatchHistoryResponse completedResponse = WatchHistoryResponse.builder()
-                .id(historyId)
-                .profileId(UUID.randomUUID())
-                .episodeId(UUID.randomUUID())
-                .progressSec(Integer.MAX_VALUE)
-                .completed(true)
-                .watchedAt(LocalDateTime.now())
-                .build();
-
-        when(historyService.getHistoryById("test@streamvault.com", historyId)).thenReturn(Mono.just(completedResponse));
-
-        Mono<ResponseEntity<WatchHistoryResponse>> result = historyController.getHistoryById("test@streamvault.com", historyId);
-
-        ResponseEntity<WatchHistoryResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertTrue(entity.getBody().getCompleted());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().getCompleted()).isTrue();
     }
 }

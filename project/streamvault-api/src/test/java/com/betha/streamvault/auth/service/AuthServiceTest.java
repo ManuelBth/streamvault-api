@@ -16,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,7 +63,6 @@ class AuthServiceTest {
                 .name("Test User")
                 .role(UserRole.ROLE_USER)
                 .isVerified(false)
-                .createdAt(Instant.now())
                 .build();
 
         registerRequest = new RegisterRequest();
@@ -80,7 +78,7 @@ class AuthServiceTest {
         when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
         when(userJpaRepository.save(any(User.class))).thenReturn(testUser);
         when(mailUserService.createMailAccount(anyString(), anyString())).thenReturn(null);
-        when(jwtService.generateAccessToken(any(UUID.class), anyString(), anyString()))
+        when(jwtService.generateAccessToken(any(UUID.class), anyString(), any(UserRole.class)))
                 .thenReturn("access-token");
         when(jwtService.generateRefreshToken(any(UUID.class)))
                 .thenReturn("refresh-token");
@@ -100,7 +98,7 @@ class AuthServiceTest {
     void login_Success() {
         when(userJpaRepository.findByEmail(anyString())).thenReturn(java.util.Optional.of(testUser));
         when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
-        when(jwtService.generateAccessToken(any(UUID.class), anyString(), anyString()))
+        when(jwtService.generateAccessToken(any(UUID.class), anyString(), any(UserRole.class)))
                 .thenReturn("access-token");
         when(jwtService.generateRefreshToken(any(UUID.class)))
                 .thenReturn("refresh-token");

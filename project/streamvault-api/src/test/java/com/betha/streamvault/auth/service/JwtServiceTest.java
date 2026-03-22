@@ -8,6 +8,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import com.betha.streamvault.user.model.UserRole;
+
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.UUID;
@@ -58,9 +60,9 @@ class JwtServiceTest {
         UUID userId = UUID.randomUUID();
         String email = "test@streamvault.com";
         String role = "ROLE_USER";
-        
+
         // When
-        String accessToken = testService.generateAccessToken(userId, email, role);
+        String accessToken = testService.generateAccessToken(userId, email, UserRole.ROLE_USER);
         
         // Then
         assertThat(accessToken).isNotNull();
@@ -107,7 +109,7 @@ class JwtServiceTest {
         );
         
         UUID userId = UUID.randomUUID();
-        String token = testService.generateAccessToken(userId, "test@test.com", "ROLE_USER");
+        String token = testService.generateAccessToken(userId, "test@test.com", UserRole.ROLE_USER);
         
         // When
         UUID extractedUserId = testService.getUserIdFromToken(token);

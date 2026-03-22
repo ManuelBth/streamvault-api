@@ -3,6 +3,7 @@ package com.betha.streamvault.catalog.controller;
 import com.betha.streamvault.catalog.dto.*;
 import com.betha.streamvault.catalog.model.ContentStatus;
 import com.betha.streamvault.catalog.model.ContentType;
+import com.betha.streamvault.catalog.model.EpisodeStatus;
 import com.betha.streamvault.catalog.service.CatalogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,15 +13,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -69,7 +67,10 @@ class CatalogControllerTest {
                 .title("Episode 1")
                 .description("First episode")
                 .minioKey("videos/episode1.mp4")
+                .thumbnailKey("thumbnails/episode1.jpg")
                 .durationSec(3600)
+                .status(EpisodeStatus.READY)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         testGenreResponse = GenreResponse.builder()
@@ -91,29 +92,27 @@ class CatalogControllerTest {
                 .last(true)
                 .build();
 
-        when(catalogService.getAllContent(0, 20)).thenReturn(Mono.just(pagedResponse));
+        when(catalogService.getAllContent(0, 20)).thenReturn(pagedResponse);
 
-        Mono<ResponseEntity<PagedResponse<ContentResponse>>> result = catalogController.getAllContent(0, 20);
+        ResponseEntity<PagedResponse<ContentResponse>> result = catalogController.getAllContent(0, 20);
 
-        ResponseEntity<PagedResponse<ContentResponse>> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertEquals(1, entity.getBody().getContent().size());
-        assertEquals("Test Movie", entity.getBody().getContent().get(0).getTitle());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().getContent()).hasSize(1);
+        assertThat(result.getBody().getContent().get(0).getTitle()).isEqualTo("Test Movie");
     }
 
     @Test
     @DisplayName("GET /catalog/{id} - Should return content by ID")
     void getContentById_Success() {
         UUID contentId = testContentResponse.getId();
-        when(catalogService.getContentById(contentId)).thenReturn(Mono.just(testContentResponse));
+        when(catalogService.getContentById(contentId)).thenReturn(testContentResponse);
 
-        Mono<ResponseEntity<ContentResponse>> result = catalogController.getContentById(contentId);
+        ResponseEntity<ContentResponse> result = catalogController.getContentById(contentId);
 
-        ResponseEntity<ContentResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertEquals("Test Movie", entity.getBody().getTitle());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().getTitle()).isEqualTo("Test Movie");
     }
 
     @Test
@@ -129,50 +128,52 @@ class CatalogControllerTest {
                 .last(true)
                 .build();
 
-        when(catalogService.searchContent("Test", 0, 20)).thenReturn(Mono.just(pagedResponse));
+        when(catalogService.searchContent("Test", 0, 20)).thenReturn(pagedResponse);
 
-        Mono<ResponseEntity<PagedResponse<ContentResponse>>> result = catalogController.searchContent("Test", 0, 20);
+        ResponseEntity<PagedResponse<ContentResponse>> result = catalogController.searchContent("Test", 0, 20);
 
-        ResponseEntity<PagedResponse<ContentResponse>> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertEquals(1, entity.getBody().getContent().size());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().getContent()).hasSize(1);
     }
 
     @Test
     @DisplayName("GET /catalog/{id}/seasons - Should return seasons for content")
     void getSeasonsByContentId_Success() {
         UUID contentId = testContentResponse.getId();
-        when(catalogService.getSeasonsByContentId(contentId)).thenReturn(Flux.just(testSeasonResponse));
+        when(catalogService.getSeasonsByContentId(contentId)).thenReturn(List.of(testSeasonResponse));
 
-        Mono<ResponseEntity<Flux<SeasonResponse>>> result = catalogController.getSeasonsByContentId(contentId);
+        ResponseEntity<List<SeasonResponse>> result = catalogController.getSeasonsByContentId(contentId);
 
-        ResponseEntity<Flux<SeasonResponse>> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody()).hasSize(1);
     }
 
     @Test
     @DisplayName("GET /catalog/seasons/{seasonId}/episodes - Should return episodes for season")
     void getEpisodesBySeasonId_Success() {
         UUID seasonId = testSeasonResponse.getId();
-        when(catalogService.getEpisodesBySeasonId(seasonId)).thenReturn(Flux.just(testEpisodeResponse));
+        when(catalogService.getEpisodesBySeasonId(seasonId)).thenReturn(List.of(testEpisodeResponse));
 
-        Mono<ResponseEntity<Flux<EpisodeResponse>>> result = catalogController.getEpisodesBySeasonId(seasonId);
+        ResponseEntity<List<EpisodeResponse>> result = catalogController.getEpisodesBySeasonId(seasonId);
 
-        ResponseEntity<Flux<EpisodeResponse>> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody()).hasSize(1);
     }
 
     @Test
     @DisplayName("GET /catalog/genres - Should return all genres")
     void getAllGenres_Success() {
-        when(catalogService.getAllGenres()).thenReturn(Flux.just(testGenreResponse));
+        when(catalogService.getAllGenres()).thenReturn(List.of(testGenreResponse));
 
-        ResponseEntity<Flux<GenreResponse>> entity = catalogController.getAllGenres();
+        ResponseEntity<List<GenreResponse>> result = catalogController.getAllGenres();
 
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody()).hasSize(1);
+        assertThat(result.getBody().get(0).getName()).isEqualTo("Action");
     }
 
     @Test
@@ -183,13 +184,12 @@ class CatalogControllerTest {
         request.setDescription("New description");
         request.setType(ContentType.MOVIE);
 
-        when(catalogService.createContent(request, "admin@test.com")).thenReturn(Mono.just(testContentResponse));
+        when(catalogService.createContent(request, "admin@test.com")).thenReturn(testContentResponse);
 
-        Mono<ResponseEntity<ContentResponse>> result = catalogController.createContent("admin@test.com", request);
+        ResponseEntity<ContentResponse> result = catalogController.createContent("admin@test.com", request);
 
-        ResponseEntity<ContentResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(result.getBody()).isNotNull();
     }
 
     @Test
@@ -199,25 +199,21 @@ class CatalogControllerTest {
         ContentRequest request = new ContentRequest();
         request.setTitle("Updated Title");
 
-        when(catalogService.updateContent(contentId, request)).thenReturn(Mono.just(testContentResponse));
+        when(catalogService.updateContent(contentId, request)).thenReturn(testContentResponse);
 
-        Mono<ResponseEntity<ContentResponse>> result = catalogController.updateContent(contentId, request);
+        ResponseEntity<ContentResponse> result = catalogController.updateContent(contentId, request);
 
-        ResponseEntity<ContentResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
     }
 
     @Test
     @DisplayName("DELETE /catalog/{id} - Should delete content")
     void deleteContent_Success() {
         UUID contentId = testContentResponse.getId();
-        when(catalogService.deleteContent(contentId)).thenReturn(Mono.empty());
 
-        Mono<ResponseEntity<Void>> result = catalogController.deleteContent(contentId);
+        ResponseEntity<Void> result = catalogController.deleteContent(contentId);
 
-        ResponseEntity<Void> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.NO_CONTENT, entity.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 }

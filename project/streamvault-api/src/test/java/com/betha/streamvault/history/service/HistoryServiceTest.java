@@ -1,7 +1,13 @@
 package com.betha.streamvault.history.service;
 
 import com.betha.streamvault.catalog.model.Episode;
+import com.betha.streamvault.catalog.model.EpisodeStatus;
+import com.betha.streamvault.catalog.model.Season;
+import com.betha.streamvault.catalog.model.Content;
+import com.betha.streamvault.catalog.model.ContentType;
+import com.betha.streamvault.catalog.model.ContentStatus;
 import com.betha.streamvault.history.dto.ProgressUpdateRequest;
+import com.betha.streamvault.history.dto.WatchHistoryRequest;
 import com.betha.streamvault.history.dto.WatchHistoryResponse;
 import com.betha.streamvault.history.model.WatchHistory;
 import com.betha.streamvault.history.repository.WatchHistoryJpaRepository;
@@ -11,6 +17,7 @@ import com.betha.streamvault.user.model.UserRole;
 import com.betha.streamvault.user.repository.ProfileJpaRepository;
 import com.betha.streamvault.user.repository.UserJpaRepository;
 import com.betha.streamvault.catalog.repository.EpisodeJpaRepository;
+import com.betha.streamvault.catalog.repository.SeasonJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,16 +50,26 @@ class HistoryServiceTest {
     @Mock
     private EpisodeJpaRepository episodeJpaRepository;
 
+    @Mock
+    private SeasonJpaRepository seasonJpaRepository;
+
     private HistoryService historyService;
 
     private User testUser;
     private Profile testProfile;
+    private Content testContent;
+    private Season testSeason;
     private Episode testEpisode;
     private WatchHistory testHistory;
 
     @BeforeEach
     void setUp() {
-        historyService = new HistoryService(watchHistoryJpaRepository, userJpaRepository, profileJpaRepository, episodeJpaRepository);
+        historyService = new HistoryService(
+                watchHistoryJpaRepository, 
+                userJpaRepository, 
+                profileJpaRepository, 
+                episodeJpaRepository
+        );
 
         testUser = User.builder()
                 .id(UUID.randomUUID())
@@ -60,24 +77,34 @@ class HistoryServiceTest {
                 .name("Test User")
                 .role(UserRole.ROLE_USER)
                 .isVerified(true)
-                .createdAt(Instant.now())
                 .build();
 
         testProfile = Profile.builder()
                 .id(UUID.randomUUID())
                 .user(testUser)
                 .name("Test Profile")
-                .createdAt(Instant.now())
+                .build();
+
+        testContent = Content.builder()
+                .id(UUID.randomUUID())
+                .title("Test Series")
+                .type(ContentType.SERIES)
+                .status(ContentStatus.PUBLISHED)
+                .build();
+
+        testSeason = Season.builder()
+                .id(UUID.randomUUID())
+                .content(testContent)
+                .seasonNumber(1)
                 .build();
 
         testEpisode = Episode.builder()
                 .id(UUID.randomUUID())
-                .seasonId(UUID.randomUUID())
+                .season(testSeason)
                 .episodeNumber(1)
                 .title("Episode 1")
                 .minioKey("videos/episode1.mp4")
-                .status("READY")
-                .createdAt(Instant.now())
+                .status(EpisodeStatus.READY)
                 .build();
 
         testHistory = WatchHistory.builder()
@@ -93,9 +120,10 @@ class HistoryServiceTest {
     @DisplayName("getActiveProfileById - Should return profile for user")
     void getActiveProfileById_Success() {
         when(userJpaRepository.findByEmail(anyString())).thenReturn(java.util.Optional.of(testUser));
+        when(userJpaRepository.findById(testUser.getId())).thenReturn(java.util.Optional.of(testUser));
         when(profileJpaRepository.findByUserOrderByCreatedAtDesc(testUser)).thenReturn(List.of(testProfile));
 
-        Profile result = historyService.getActiveProfileById(testUser.getId(), testUser.getEmail());
+        Profile result = historyService.getActiveProfileById(testProfile.getId(), testUser.getEmail());
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(testProfile.getId());
@@ -106,10 +134,11 @@ class HistoryServiceTest {
     @DisplayName("getHistory - Should return watch history for user")
     void getHistory_Success() {
         when(userJpaRepository.findByEmail(anyString())).thenReturn(java.util.Optional.of(testUser));
+        when(userJpaRepository.findById(testUser.getId())).thenReturn(java.util.Optional.of(testUser));
         when(profileJpaRepository.findByUserOrderByCreatedAtDesc(testUser)).thenReturn(List.of(testProfile));
-        when(watchHistoryJpaRepository.findByProfileIdOrderByWatchedAtDesc(testProfile.getId())).thenReturn(List.of(testHistory));
+        when(watchHistoryJpaRepository.findByProfileOrderByWatchedAtDesc(testProfile)).thenReturn(List.of(testHistory));
 
-        List<WatchHistoryResponse> result = historyService.getHistory(testUser.getEmail(), testUser.getId());
+        List<WatchHistoryResponse> result = historyService.getHistory(testUser.getEmail(), testProfile.getId());
 
         assertThat(result).isNotEmpty();
         assertThat(result.get(0).getId()).isEqualTo(testHistory.getId());
@@ -121,17 +150,23 @@ class HistoryServiceTest {
         UUID newEpisodeId = UUID.randomUUID();
         Episode newEpisode = Episode.builder()
                 .id(newEpisodeId)
-                .seasonId(UUID.randomUUID())
+                .season(testSeason)
                 .episodeNumber(1)
                 .title("New Episode")
                 .minioKey("videos/new.mp4")
-                .status("READY")
+                .status(EpisodeStatus.READY)
+                .build();
+
+        WatchHistoryRequest request = WatchHistoryRequest.builder()
+                .episodeId(newEpisodeId)
+                .progressSec(0)
                 .build();
 
         when(userJpaRepository.findByEmail(anyString())).thenReturn(java.util.Optional.of(testUser));
+        when(userJpaRepository.findById(testUser.getId())).thenReturn(java.util.Optional.of(testUser));
         when(profileJpaRepository.findByUserOrderByCreatedAtDesc(testUser)).thenReturn(List.of(testProfile));
         when(episodeJpaRepository.findById(newEpisodeId)).thenReturn(java.util.Optional.of(newEpisode));
-        when(watchHistoryJpaRepository.findByProfileIdAndEpisodeId(testProfile.getId(), newEpisodeId)).thenReturn(java.util.Optional.empty());
+        when(watchHistoryJpaRepository.findByProfileAndEpisode(testProfile, newEpisode)).thenReturn(java.util.Optional.empty());
 
         WatchHistory newHistory = WatchHistory.builder()
                 .id(UUID.randomUUID())
@@ -142,7 +177,7 @@ class HistoryServiceTest {
                 .build();
         when(watchHistoryJpaRepository.save(any(WatchHistory.class))).thenReturn(newHistory);
 
-        WatchHistoryResponse result = historyService.startTracking(testUser.getEmail(), testUser.getId(), newEpisodeId);
+        WatchHistoryResponse result = historyService.startTracking(testUser.getEmail(), testProfile.getId(), request);
 
         assertThat(result).isNotNull();
         assertThat(result.getProgressSec()).isEqualTo(0);
@@ -155,11 +190,17 @@ class HistoryServiceTest {
         request.setProgressSec(300);
 
         when(userJpaRepository.findByEmail(anyString())).thenReturn(java.util.Optional.of(testUser));
+        when(userJpaRepository.findById(testUser.getId())).thenReturn(java.util.Optional.of(testUser));
         when(profileJpaRepository.findByUserOrderByCreatedAtDesc(testUser)).thenReturn(List.of(testProfile));
         when(watchHistoryJpaRepository.findById(testHistory.getId())).thenReturn(java.util.Optional.of(testHistory));
         when(watchHistoryJpaRepository.save(any(WatchHistory.class))).thenReturn(testHistory);
 
-        WatchHistoryResponse result = historyService.updateProgress(testUser.getEmail(), testProfile.getId(), testHistory.getId(), request);
+        WatchHistoryResponse result = historyService.updateProgress(
+                testUser.getEmail(), 
+                testProfile.getId(), 
+                testHistory.getId(), 
+                request
+        );
 
         assertThat(result).isNotNull();
     }
@@ -168,11 +209,16 @@ class HistoryServiceTest {
     @DisplayName("markAsCompleted - Should mark history as completed")
     void markAsCompleted_Success() {
         when(userJpaRepository.findByEmail(anyString())).thenReturn(java.util.Optional.of(testUser));
+        when(userJpaRepository.findById(testUser.getId())).thenReturn(java.util.Optional.of(testUser));
         when(profileJpaRepository.findByUserOrderByCreatedAtDesc(testUser)).thenReturn(List.of(testProfile));
         when(watchHistoryJpaRepository.findById(testHistory.getId())).thenReturn(java.util.Optional.of(testHistory));
         when(watchHistoryJpaRepository.save(any(WatchHistory.class))).thenReturn(testHistory);
 
-        WatchHistoryResponse result = historyService.markAsCompleted(testUser.getEmail(), testProfile.getId(), testHistory.getId());
+        WatchHistoryResponse result = historyService.markAsCompleted(
+                testUser.getEmail(), 
+                testProfile.getId(), 
+                testHistory.getId()
+        );
 
         assertThat(result).isNotNull();
     }

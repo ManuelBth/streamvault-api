@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,7 +38,6 @@ class AdminUserServiceTest {
                 .name("Test User")
                 .role(UserRole.ROLE_USER)
                 .isVerified(true)
-                .createdAt(Instant.now())
                 .build();
     }
 
@@ -66,7 +64,6 @@ class AdminUserServiceTest {
                 .name("Admin User")
                 .role(UserRole.ROLE_ADMIN)
                 .isVerified(true)
-                .createdAt(Instant.parse("2024-01-15T10:30:00Z"))
                 .build();
 
         when(userJpaRepository.findById(userWithAllFields.getId())).thenReturn(Optional.of(userWithAllFields));
