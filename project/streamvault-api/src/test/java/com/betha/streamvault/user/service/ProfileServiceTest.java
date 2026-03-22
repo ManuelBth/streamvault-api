@@ -131,8 +131,7 @@ class ProfileServiceTest {
     @Test
     @DisplayName("deleteProfile - Should delete profile")
     void deleteProfile_Success() {
-        when(profileJpaRepository.findById(profileId)).thenReturn(Optional.of(testProfile));
-
+        // deleteById is called directly, no findById needed
         assertDoesNotThrow(() -> profileService.deleteProfile(profileId));
     }
 
