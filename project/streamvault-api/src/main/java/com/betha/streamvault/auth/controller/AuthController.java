@@ -54,10 +54,4 @@ public class AuthController {
         log.info("User logged out successfully");
         return ResponseEntity.ok().build();
     }
-
-    @GetMapping("/confirm")
-    public ResponseEntity<Map<String, String>> confirm(@RequestParam String token) {
-        log.info("GET /api/v1/auth/confirm");
-        return ResponseEntity.ok(Map.of("message", "Email confirmed"));
-    }
 }
