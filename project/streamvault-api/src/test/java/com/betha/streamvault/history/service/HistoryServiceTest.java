@@ -190,8 +190,6 @@ class HistoryServiceTest {
         request.setProgressSec(300);
 
         when(userJpaRepository.findByEmail(anyString())).thenReturn(java.util.Optional.of(testUser));
-        when(userJpaRepository.findById(testUser.getId())).thenReturn(java.util.Optional.of(testUser));
-        when(profileJpaRepository.findByUserOrderByCreatedAtDesc(testUser)).thenReturn(List.of(testProfile));
         when(watchHistoryJpaRepository.findById(testHistory.getId())).thenReturn(java.util.Optional.of(testHistory));
         when(watchHistoryJpaRepository.save(any(WatchHistory.class))).thenReturn(testHistory);
 

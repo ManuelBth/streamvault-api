@@ -72,6 +72,7 @@ class NotificationServiceTest {
     @Test
     @DisplayName("getNotifications - Should return all notifications for user")
     void getNotifications_Success() {
+        when(userJpaRepository.findById(userId)).thenReturn(java.util.Optional.of(testUser));
         when(notificationJpaRepository.findByUserOrderByCreatedAtDesc(testUser))
                 .thenReturn(List.of(testNotification));
 
@@ -85,6 +86,7 @@ class NotificationServiceTest {
     @Test
     @DisplayName("getUnreadNotifications - Should return only unread notifications")
     void getUnreadNotifications_Success() {
+        when(userJpaRepository.findById(userId)).thenReturn(java.util.Optional.of(testUser));
         when(notificationJpaRepository.findByUserAndIsReadFalseOrderByCreatedAtDesc(testUser))
                 .thenReturn(List.of(testNotification));
 
@@ -97,6 +99,7 @@ class NotificationServiceTest {
     @Test
     @DisplayName("getUnreadCount - Should return count of unread notifications")
     void getUnreadCount_Success() {
+        when(userJpaRepository.findById(userId)).thenReturn(java.util.Optional.of(testUser));
         when(notificationJpaRepository.countByUserAndIsReadFalse(testUser))
                 .thenReturn(5L);
 
@@ -108,6 +111,7 @@ class NotificationServiceTest {
     @Test
     @DisplayName("createNotification - Should create and send notification via WebSocket")
     void createNotification_Success() {
+        when(userJpaRepository.findById(userId)).thenReturn(java.util.Optional.of(testUser));
         when(notificationJpaRepository.save(any(Notification.class)))
                 .thenReturn(testNotification);
         doNothing().when(webSocketHandler).sendNotificationToUser(anyString(), any());
