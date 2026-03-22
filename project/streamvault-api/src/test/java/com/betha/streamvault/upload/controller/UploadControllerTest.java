@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -26,14 +27,13 @@ class UploadControllerTest {
     @Mock
     private UploadService uploadService;
 
+    @InjectMocks
     private UploadController uploadController;
 
     private UploadResponse testUploadResponse;
 
     @BeforeEach
     void setUp() {
-        uploadController = new UploadController(uploadService);
-
         testUploadResponse = UploadResponse.builder()
                 .key("thumbnails/content/test.jpg")
                 .url("https://minio.example.com/thumbnails/test.jpg?token=xyz")
@@ -54,15 +54,13 @@ class UploadControllerTest {
                 new byte[]{1, 2, 3, 4, 5}
         );
 
-        when(uploadService.uploadThumbnail(any(), any())).thenReturn(Mono.just(testUploadResponse));
+        when(uploadService.uploadThumbnail(any(), any())).thenReturn(testUploadResponse);
 
-        Mono<ResponseEntity<UploadResponse>> result = uploadController.uploadThumbnail("admin@test.com", file);
+        ResponseEntity<UploadResponse> result = uploadController.uploadThumbnail("admin@test.com", file);
 
-        ResponseEntity<UploadResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertEquals("thumbnails/content/test.jpg", entity.getBody().getKey());
-        assertEquals("test.jpg", entity.getBody().getFilename());
+        assertEquals(HttpStatus.CREATED, result.getStatusCode());
+        assertEquals("thumbnails/content/test.jpg", result.getBody().getKey());
+        assertEquals("test.jpg", result.getBody().getFilename());
     }
 
     @Test
@@ -75,13 +73,11 @@ class UploadControllerTest {
                 new byte[]{1, 2, 3, 4, 5}
         );
 
-        when(uploadService.uploadThumbnail(any(), any())).thenReturn(Mono.error(new RuntimeException("Upload failed")));
+        when(uploadService.uploadThumbnail(any(), any())).thenThrow(new RuntimeException("Upload failed"));
 
-        Mono<ResponseEntity<UploadResponse>> result = uploadController.uploadThumbnail("admin@test.com", file);
+        ResponseEntity<UploadResponse> result = uploadController.uploadThumbnail("admin@test.com", file);
 
-        ResponseEntity<UploadResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.BAD_REQUEST, entity.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
     }
 
     @Test
@@ -94,13 +90,11 @@ class UploadControllerTest {
                 new byte[]{1, 2, 3, 4, 5}
         );
 
-        when(uploadService.uploadThumbnail(any(), any())).thenReturn(Mono.error(new IllegalArgumentException("Invalid file type")));
+        when(uploadService.uploadThumbnail(any(), any())).thenThrow(new IllegalArgumentException("Invalid file type"));
 
-        Mono<ResponseEntity<UploadResponse>> result = uploadController.uploadThumbnail("admin@test.com", file);
+        ResponseEntity<UploadResponse> result = uploadController.uploadThumbnail("admin@test.com", file);
 
-        ResponseEntity<UploadResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.BAD_REQUEST, entity.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
     }
 
     @Test
@@ -114,13 +108,11 @@ class UploadControllerTest {
                 largeContent
         );
 
-        when(uploadService.uploadThumbnail(any(), any())).thenReturn(Mono.error(new IllegalArgumentException("File too large")));
+        when(uploadService.uploadThumbnail(any(), any())).thenThrow(new IllegalArgumentException("File too large"));
 
-        Mono<ResponseEntity<UploadResponse>> result = uploadController.uploadThumbnail("admin@test.com", file);
+        ResponseEntity<UploadResponse> result = uploadController.uploadThumbnail("admin@test.com", file);
 
-        ResponseEntity<UploadResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.BAD_REQUEST, entity.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
     }
 
     @Test
@@ -142,13 +134,11 @@ class UploadControllerTest {
                 .uploadedAt(Instant.now())
                 .build();
 
-        when(uploadService.uploadThumbnail(any(), any())).thenReturn(Mono.just(pngResponse));
+        when(uploadService.uploadThumbnail(any(), any())).thenReturn(pngResponse);
 
-        Mono<ResponseEntity<UploadResponse>> result = uploadController.uploadThumbnail("admin@test.com", file);
+        ResponseEntity<UploadResponse> result = uploadController.uploadThumbnail("admin@test.com", file);
 
-        ResponseEntity<UploadResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertEquals("image/png", entity.getBody().getContentType());
+        assertEquals(HttpStatus.CREATED, result.getStatusCode());
+        assertEquals("image/png", result.getBody().getContentType());
     }
 }

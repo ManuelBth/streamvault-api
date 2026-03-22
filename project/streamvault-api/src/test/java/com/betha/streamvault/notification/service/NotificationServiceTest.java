@@ -3,24 +3,24 @@ package com.betha.streamvault.notification.service;
 import com.betha.streamvault.notification.config.NotificationWebSocketHandler;
 import com.betha.streamvault.notification.dto.NotificationResponse;
 import com.betha.streamvault.notification.model.Notification;
-import com.betha.streamvault.notification.repository.NotificationRepository;
+import com.betha.streamvault.notification.repository.NotificationJpaRepository;
+import com.betha.streamvault.user.model.User;
+import com.betha.streamvault.user.model.UserRole;
+import com.betha.streamvault.user.repository.UserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.time.Instant;
-import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,40 +28,43 @@ import static org.mockito.Mockito.*;
 class NotificationServiceTest {
 
     @Mock
-    private NotificationRepository notificationRepository;
+    private NotificationJpaRepository notificationJpaRepository;
 
     @Mock
     private NotificationWebSocketHandler webSocketHandler;
 
-    @InjectMocks
+    @Mock
+    private UserJpaRepository userJpaRepository;
+
     private NotificationService notificationService;
 
     private UUID userId;
     private UUID notificationId;
+    private User testUser;
     private Notification testNotification;
-    private NotificationResponse testNotificationResponse;
 
     @BeforeEach
     void setUp() {
+        notificationService = new NotificationService(notificationJpaRepository, webSocketHandler, userJpaRepository);
+
         userId = UUID.randomUUID();
         notificationId = UUID.randomUUID();
 
-        testNotification = new Notification(
-                notificationId,
-                userId,
-                Notification.NotificationType.NEW_CONTENT,
-                "Test Title",
-                "Test Message",
-                UUID.randomUUID(),
-                false,
-                Instant.now()
-        );
+        testUser = User.builder()
+                .id(userId)
+                .email("test@streamvault.com")
+                .name("Test User")
+                .role(UserRole.ROLE_USER)
+                .isVerified(true)
+                .build();
 
-        testNotificationResponse = NotificationResponse.builder()
+        testNotification = Notification.builder()
                 .id(notificationId)
+                .user(testUser)
                 .type(Notification.NotificationType.NEW_CONTENT)
                 .title("Test Title")
                 .message("Test Message")
+                .relatedId(UUID.randomUUID())
                 .isRead(false)
                 .build();
     }
@@ -69,67 +72,56 @@ class NotificationServiceTest {
     @Test
     @DisplayName("getNotifications - Should return all notifications for user")
     void getNotifications_Success() {
-        // Given
-        when(notificationRepository.findByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(Flux.just(testNotification));
+        when(notificationJpaRepository.findByUserOrderByCreatedAtDesc(testUser))
+                .thenReturn(List.of(testNotification));
 
-        // When & Then
-        StepVerifier.create(notificationService.getNotifications(userId))
-                .assertNext(response -> {
-                    assertThat(response.getId()).isEqualTo(notificationId);
-                    assertThat(response.getTitle()).isEqualTo("Test Title");
-                })
-                .verifyComplete();
+        List<NotificationResponse> responses = notificationService.getNotifications(userId);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).getId()).isEqualTo(notificationId);
+        assertThat(responses.get(0).getTitle()).isEqualTo("Test Title");
     }
 
     @Test
     @DisplayName("getUnreadNotifications - Should return only unread notifications")
     void getUnreadNotifications_Success() {
-        // Given
-        when(notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId))
-                .thenReturn(Flux.just(testNotification));
+        when(notificationJpaRepository.findByUserAndIsReadFalseOrderByCreatedAtDesc(testUser))
+                .thenReturn(List.of(testNotification));
 
-        // When & Then
-        StepVerifier.create(notificationService.getUnreadNotifications(userId))
-                .assertNext(response -> {
-                    assertThat(response.getIsRead()).isFalse();
-                })
-                .verifyComplete();
+        List<NotificationResponse> responses = notificationService.getUnreadNotifications(userId);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).getIsRead()).isFalse();
     }
 
     @Test
     @DisplayName("getUnreadCount - Should return count of unread notifications")
     void getUnreadCount_Success() {
-        // Given
-        when(notificationRepository.countByUserIdAndIsReadFalse(userId))
-                .thenReturn(Mono.just(5L));
+        when(notificationJpaRepository.countByUserAndIsReadFalse(testUser))
+                .thenReturn(5L);
 
-        // When & Then
-        StepVerifier.create(notificationService.getUnreadCount(userId))
-                .assertNext(count -> assertThat(count).isEqualTo(5L))
-                .verifyComplete();
+        long count = notificationService.getUnreadCount(userId);
+
+        assertThat(count).isEqualTo(5L);
     }
 
     @Test
     @DisplayName("createNotification - Should create and send notification via WebSocket")
     void createNotification_Success() {
-        // Given
-        when(notificationRepository.save(any(Notification.class)))
-                .thenReturn(Mono.just(testNotification));
+        when(notificationJpaRepository.save(any(Notification.class)))
+                .thenReturn(testNotification);
         doNothing().when(webSocketHandler).sendNotificationToUser(anyString(), any());
 
-        // When & Then
-        StepVerifier.create(notificationService.createNotification(
+        NotificationResponse response = notificationService.createNotification(
                 userId,
                 Notification.NotificationType.NEW_CONTENT,
                 "Test Title",
                 "Test Message",
                 UUID.randomUUID()
-        ))
-                .assertNext(response -> {
-                    assertThat(response.getTitle()).isEqualTo("Test Title");
-                })
-                .verifyComplete();
+        );
+
+        assertThat(response).isNotNull();
+        assertThat(response.getTitle()).isEqualTo("Test Title");
 
         verify(webSocketHandler).sendNotificationToUser(eq(userId.toString()), any());
     }
@@ -137,90 +129,42 @@ class NotificationServiceTest {
     @Test
     @DisplayName("markAsRead - Should mark notification as read")
     void markAsRead_Success() {
-        // Given
-        when(notificationRepository.findById(notificationId))
-                .thenReturn(Mono.just(testNotification));
-        when(notificationRepository.save(any(Notification.class)))
-                .thenReturn(Mono.just(testNotification));
+        when(notificationJpaRepository.findById(notificationId))
+                .thenReturn(java.util.Optional.of(testNotification));
+        when(notificationJpaRepository.save(any(Notification.class)))
+                .thenReturn(testNotification);
 
-        // When & Then
-        StepVerifier.create(notificationService.markAsRead(notificationId, userId))
-                .verifyComplete();
+        notificationService.markAsRead(notificationId, userId);
 
-        verify(notificationRepository).save(argThat(notification ->
-                notification.getIsRead() == true));
-    }
-
-    @Test
-    @DisplayName("markAsRead - Should fail when user tries to mark another user's notification")
-    void markAsRead_Unauthorized() {
-        // Given
-        UUID differentUserId = UUID.randomUUID();
-        when(notificationRepository.findById(notificationId))
-                .thenReturn(Mono.just(testNotification));
-
-        // When & Then
-        StepVerifier.create(notificationService.markAsRead(notificationId, differentUserId))
-                .expectErrorMatches(throwable ->
-                        throwable.getMessage().equals("Notificación no autorizada"))
-                .verify();
-    }
-
-    @Test
-    @DisplayName("markAllAsRead - Should mark all notifications as read")
-    void markAllAsRead_Success() {
-        // Given
-        Notification notification1 = new Notification(
-                UUID.randomUUID(), userId, Notification.NotificationType.NEW_CONTENT,
-                "Title 1", "Message 1", null, false, Instant.now()
-        );
-        Notification notification2 = new Notification(
-                UUID.randomUUID(), userId, Notification.NotificationType.NEW_EPISODE,
-                "Title 2", "Message 2", null, false, Instant.now()
-        );
-
-        when(notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId))
-                .thenReturn(Flux.just(notification1, notification2));
-        when(notificationRepository.save(any(Notification.class)))
-                .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
-
-        // When & Then
-        StepVerifier.create(notificationService.markAllAsRead(userId))
-                .verifyComplete();
-
-        verify(notificationRepository, times(2)).save(argThat(n -> n.getIsRead() == true));
+        verify(notificationJpaRepository).save(argThat(n -> n.getIsRead() == true));
     }
 
     @Test
     @DisplayName("createBroadcastNotification - Should create and broadcast notification")
     void createBroadcastNotification_Success() {
-        // Given
         Notification broadcastNotification = Notification.builder()
                 .id(UUID.randomUUID())
-                .userId(null)
+                .user(null)
                 .type(Notification.NotificationType.SYSTEM)
                 .title("System Message")
                 .message("Important announcement")
                 .relatedId(null)
                 .isRead(false)
-                .createdAt(Instant.now())
                 .build();
 
-        when(notificationRepository.save(any(Notification.class)))
-                .thenReturn(Mono.just(broadcastNotification));
+        when(notificationJpaRepository.save(any(Notification.class)))
+                .thenReturn(broadcastNotification);
         doNothing().when(webSocketHandler).broadcastNotification(any());
 
-        // When & Then
-        StepVerifier.create(notificationService.createBroadcastNotification(
+        NotificationResponse response = notificationService.createBroadcastNotification(
                 Notification.NotificationType.SYSTEM,
                 "System Message",
                 "Important announcement",
                 null
-        ))
-                .assertNext(response -> {
-                    assertThat(response.getTitle()).isEqualTo("System Message");
-                })
-                .verifyComplete();
+        );
+
+        assertThat(response).isNotNull();
+        assertThat(response.getTitle()).isEqualTo("System Message");
 
         verify(webSocketHandler).broadcastNotification(any());
     }

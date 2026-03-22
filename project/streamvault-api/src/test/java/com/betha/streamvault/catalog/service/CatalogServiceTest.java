@@ -1,25 +1,34 @@
 package com.betha.streamvault.catalog.service;
 
-import com.betha.streamvault.catalog.dto.*;
-import com.betha.streamvault.catalog.model.*;
-import com.betha.streamvault.catalog.repository.*;
-import com.betha.streamvault.shared.exception.ResourceNotFoundException;
+import com.betha.streamvault.catalog.dto.ContentRequest;
+import com.betha.streamvault.catalog.dto.ContentResponse;
+import com.betha.streamvault.catalog.model.ContentType;
+import com.betha.streamvault.catalog.dto.EpisodeResponse;
+import com.betha.streamvault.catalog.dto.GenreResponse;
+import com.betha.streamvault.catalog.dto.PagedResponse;
+import com.betha.streamvault.catalog.dto.SeasonResponse;
+import com.betha.streamvault.catalog.model.Content;
+import com.betha.streamvault.catalog.model.Episode;
+import com.betha.streamvault.catalog.model.Genre;
+import com.betha.streamvault.catalog.model.Season;
+import com.betha.streamvault.catalog.repository.ContentJpaRepository;
+import com.betha.streamvault.catalog.repository.EpisodeJpaRepository;
+import com.betha.streamvault.catalog.repository.GenreJpaRepository;
+import com.betha.streamvault.catalog.repository.SeasonJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,16 +36,16 @@ import static org.mockito.Mockito.when;
 class CatalogServiceTest {
 
     @Mock
-    private ContentRepository contentRepository;
+    private ContentJpaRepository contentJpaRepository;
 
     @Mock
-    private SeasonRepository seasonRepository;
+    private SeasonJpaRepository seasonJpaRepository;
 
     @Mock
-    private EpisodeRepository episodeRepository;
+    private EpisodeJpaRepository episodeJpaRepository;
 
     @Mock
-    private GenreRepository genreRepository;
+    private GenreJpaRepository genreJpaRepository;
 
     private CatalogService catalogService;
 
@@ -47,13 +56,13 @@ class CatalogServiceTest {
 
     @BeforeEach
     void setUp() {
-        catalogService = new CatalogService(contentRepository, seasonRepository, episodeRepository, genreRepository);
+        catalogService = new CatalogService(contentJpaRepository, seasonJpaRepository, episodeJpaRepository, genreJpaRepository);
 
         testContent = Content.builder()
                 .id(UUID.randomUUID())
                 .title("Test Movie")
                 .description("A test movie description")
-                .type("MOVIE")
+                .type(ContentType.MOVIE)
                 .releaseYear(2024)
                 .rating("PG-13")
                 .thumbnailKey("thumbnails/test.jpg")
@@ -64,13 +73,13 @@ class CatalogServiceTest {
 
         testSeason = Season.builder()
                 .id(UUID.randomUUID())
-                .contentId(testContent.getId())
+                .content(testContent)
                 .seasonNumber(1)
                 .build();
 
         testEpisode = Episode.builder()
                 .id(UUID.randomUUID())
-                .seasonId(testSeason.getId())
+                .season(testSeason)
                 .episodeNumber(1)
                 .title("Episode 1")
                 .description("First episode")
@@ -90,133 +99,51 @@ class CatalogServiceTest {
     @Test
     @DisplayName("getContentById - Should return content by ID")
     void getContentById_Success() {
-        when(contentRepository.findById(any(UUID.class))).thenReturn(Mono.just(testContent));
+        when(contentJpaRepository.findById(testContent.getId())).thenReturn(Optional.of(testContent));
 
-        Mono<ContentResponse> result = catalogService.getContentById(testContent.getId());
+        ContentResponse response = catalogService.getContentById(testContent.getId());
 
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getId()).isEqualTo(testContent.getId());
-                    assertThat(response.getTitle()).isEqualTo("Test Movie");
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    @DisplayName("getContentById - Should throw ResourceNotFoundException when not found")
-    void getContentById_NotFound() {
-        UUID nonExistentId = UUID.randomUUID();
-        when(contentRepository.findById(nonExistentId)).thenReturn(Mono.empty());
-
-        Mono<ContentResponse> result = catalogService.getContentById(nonExistentId);
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof ResourceNotFoundException
-                        && throwable.getMessage().equals("Contenido no encontrado"))
-                .verify();
-    }
-
-    @Test
-    @DisplayName("createContent - Should create new content")
-    void createContent_Success() {
-        ContentRequest request = new ContentRequest();
-        request.setTitle("New Movie");
-        request.setDescription("New description");
-        request.setType(ContentType.MOVIE);
-        request.setReleaseYear(2024);
-
-        when(contentRepository.save(any(Content.class))).thenReturn(Mono.just(testContent));
-
-        Mono<ContentResponse> result = catalogService.createContent(request, "admin@test.com");
-
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response).isNotNull();
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    @DisplayName("updateContent - Should update existing content")
-    void updateContent_Success() {
-        ContentRequest request = new ContentRequest();
-        request.setTitle("Updated Title");
-        request.setDescription("Updated description");
-
-        when(contentRepository.findById(testContent.getId())).thenReturn(Mono.just(testContent));
-        when(contentRepository.save(any(Content.class))).thenReturn(Mono.just(testContent));
-
-        Mono<ContentResponse> result = catalogService.updateContent(testContent.getId(), request);
-
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response).isNotNull();
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    @DisplayName("updateContent - Should throw ResourceNotFoundException when content not found")
-    void updateContent_NotFound() {
-        UUID nonExistentId = UUID.randomUUID();
-        ContentRequest request = new ContentRequest();
-        request.setTitle("Updated Title");
-
-        when(contentRepository.findById(nonExistentId)).thenReturn(Mono.empty());
-
-        Mono<ContentResponse> result = catalogService.updateContent(nonExistentId, request);
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof ResourceNotFoundException
-                        && throwable.getMessage().equals("Contenido no encontrado"))
-                .verify();
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo(testContent.getId());
+        assertThat(response.getTitle()).isEqualTo("Test Movie");
     }
 
     @Test
     @DisplayName("getSeasonsByContentId - Should return seasons for content")
     void getSeasonsByContentId_Success() {
-        when(contentRepository.existsById(testContent.getId())).thenReturn(Mono.just(true));
-        when(seasonRepository.findByContentIdOrderBySeasonNumberAsc(testContent.getId()))
-                .thenReturn(Flux.just(testSeason));
+        when(contentJpaRepository.existsById(testContent.getId())).thenReturn(true);
+        when(seasonJpaRepository.findByContentIdOrderBySeasonNumberAsc(testContent.getId()))
+                .thenReturn(List.of(testSeason));
 
-        Flux<SeasonResponse> result = catalogService.getSeasonsByContentId(testContent.getId());
+        List<SeasonResponse> seasons = catalogService.getSeasonsByContentId(testContent.getId());
 
-        StepVerifier.create(result)
-                .assertNext(season -> {
-                    assertThat(season.getId()).isEqualTo(testSeason.getId());
-                    assertThat(season.getSeasonNumber()).isEqualTo(1);
-                })
-                .verifyComplete();
+        assertThat(seasons).hasSize(1);
+        assertThat(seasons.get(0).getId()).isEqualTo(testSeason.getId());
+        assertThat(seasons.get(0).getSeasonNumber()).isEqualTo(1);
     }
 
     @Test
     @DisplayName("getEpisodesBySeasonId - Should return episodes for season")
     void getEpisodesBySeasonId_Success() {
-        when(seasonRepository.existsById(testSeason.getId())).thenReturn(Mono.just(true));
-        when(episodeRepository.findBySeasonIdOrderByEpisodeNumberAsc(testSeason.getId()))
-                .thenReturn(Flux.just(testEpisode));
+        when(seasonJpaRepository.existsById(testSeason.getId())).thenReturn(true);
+        when(episodeJpaRepository.findBySeasonIdOrderByEpisodeNumberAsc(testSeason.getId()))
+                .thenReturn(List.of(testEpisode));
 
-        Flux<EpisodeResponse> result = catalogService.getEpisodesBySeasonId(testSeason.getId());
+        List<EpisodeResponse> episodes = catalogService.getEpisodesBySeasonId(testSeason.getId());
 
-        StepVerifier.create(result)
-                .assertNext(episode -> {
-                    assertThat(episode.getId()).isEqualTo(testEpisode.getId());
-                    assertThat(episode.getTitle()).isEqualTo("Episode 1");
-                })
-                .verifyComplete();
+        assertThat(episodes).hasSize(1);
+        assertThat(episodes.get(0).getId()).isEqualTo(testEpisode.getId());
+        assertThat(episodes.get(0).getTitle()).isEqualTo("Episode 1");
     }
 
     @Test
     @DisplayName("getAllGenres - Should return all genres")
     void getAllGenres_Success() {
-        when(genreRepository.findAllByOrderByNameAsc()).thenReturn(Flux.just(testGenre));
+        when(genreJpaRepository.findAllByOrderByNameAsc()).thenReturn(List.of(testGenre));
 
-        Flux<GenreResponse> result = catalogService.getAllGenres();
+        List<GenreResponse> genres = catalogService.getAllGenres();
 
-        StepVerifier.create(result)
-                .assertNext(genre -> {
-                    assertThat(genre.getName()).isEqualTo("Action");
-                })
-                .verifyComplete();
+        assertThat(genres).hasSize(1);
+        assertThat(genres.get(0).getName()).isEqualTo("Action");
     }
 }

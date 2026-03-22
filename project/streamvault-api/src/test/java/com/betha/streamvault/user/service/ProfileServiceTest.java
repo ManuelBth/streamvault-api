@@ -3,18 +3,19 @@ package com.betha.streamvault.user.service;
 import com.betha.streamvault.user.dto.ProfileRequest;
 import com.betha.streamvault.user.dto.ProfileResponse;
 import com.betha.streamvault.user.model.Profile;
-import com.betha.streamvault.user.repository.ProfileRepository;
+import com.betha.streamvault.user.model.User;
+import com.betha.streamvault.user.model.UserRole;
+import com.betha.streamvault.user.repository.ProfileJpaRepository;
+import com.betha.streamvault.user.repository.UserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,54 +27,64 @@ import static org.mockito.Mockito.when;
 class ProfileServiceTest {
 
     @Mock
-    private ProfileRepository profileRepository;
+    private ProfileJpaRepository profileJpaRepository;
+
+    @Mock
+    private UserJpaRepository userJpaRepository;
 
     private ProfileService profileService;
 
     private Profile testProfile;
+    private User testUser;
     private UUID userId;
     private UUID profileId;
 
     @BeforeEach
     void setUp() {
-        profileService = new ProfileService(profileRepository);
+        profileService = new ProfileService(profileJpaRepository, userJpaRepository);
         
         userId = UUID.randomUUID();
         profileId = UUID.randomUUID();
         
+        testUser = User.builder()
+                .id(userId)
+                .email("test@streamvault.com")
+                .name("Test User")
+                .role(UserRole.ROLE_USER)
+                .isVerified(true)
+                .build();
+        
         testProfile = Profile.builder()
                 .id(profileId)
-                .userId(userId)
+                .user(testUser)
                 .name("Test Profile")
                 .avatarUrl(null)
-                .createdAt(Instant.now())
                 .build();
     }
 
     @Test
     @DisplayName("getProfilesByUserId - Should return all profiles for user")
     void getProfilesByUserId_Success() {
-        when(profileRepository.findByUserId(userId)).thenReturn(Flux.just(testProfile));
+        when(userJpaRepository.findById(userId)).thenReturn(Optional.of(testUser));
+        when(profileJpaRepository.findByUserOrderByCreatedAtDesc(testUser)).thenReturn(java.util.List.of(testProfile));
 
-        StepVerifier.create(profileService.getProfilesByUserId(userId))
-                .assertNext(response -> {
-                    assertEquals(testProfile.getName(), response.getName());
-                    assertEquals(testProfile.getId(), response.getId());
-                })
-                .verifyComplete();
+        var result = profileService.getProfilesByUserId(userId);
+
+        assertFalse(result.isEmpty());
+        assertEquals(testProfile.getName(), result.get(0).getName());
+        assertEquals(testProfile.getId(), result.get(0).getId());
     }
 
     @Test
     @DisplayName("getProfileById - Should return profile by ID")
     void getProfileById_Success() {
-        when(profileRepository.findById(profileId)).thenReturn(Mono.just(testProfile));
+        when(profileJpaRepository.findById(profileId)).thenReturn(Optional.of(testProfile));
 
-        StepVerifier.create(profileService.getProfileById(profileId))
-                .assertNext(response -> {
-                    assertEquals(testProfile.getId(), response.getId());
-                    assertEquals(testProfile.getName(), response.getName());
-                })
-                .verifyComplete();
+        var result = profileService.getProfileById(profileId);
+
+        assertTrue(result.isPresent());
+        assertEquals(testProfile.getId(), result.get().getId());
+        assertEquals(testProfile.getName(), result.get().getName());
     }
 
     @Test
@@ -82,14 +93,13 @@ class ProfileServiceTest {
         ProfileRequest request = new ProfileRequest();
         request.setName("New Profile");
 
-        when(profileRepository.countByUserId(userId)).thenReturn(Mono.just(2L));
-        when(profileRepository.save(any(Profile.class))).thenReturn(Mono.just(testProfile));
+        when(userJpaRepository.findById(userId)).thenReturn(Optional.of(testUser));
+        when(profileJpaRepository.countByUser(testUser)).thenReturn(2L);
+        when(profileJpaRepository.save(any(Profile.class))).thenReturn(testProfile);
 
-        StepVerifier.create(profileService.createProfile(userId, request))
-                .assertNext(response -> {
-                    assertNotNull(response);
-                })
-                .verifyComplete();
+        var result = profileService.createProfile(userId, request);
+
+        assertNotNull(result);
     }
 
     @Test
@@ -98,12 +108,10 @@ class ProfileServiceTest {
         ProfileRequest request = new ProfileRequest();
         request.setName("New Profile");
 
-        when(profileRepository.countByUserId(userId))
-                .thenReturn(Mono.just((long) Profile.MAX_PROFILES_PER_USER));
+        when(userJpaRepository.findById(userId)).thenReturn(Optional.of(testUser));
+        when(profileJpaRepository.countByUser(testUser)).thenReturn((long) Profile.MAX_PROFILES_PER_USER);
 
-        StepVerifier.create(profileService.createProfile(userId, request))
-                .expectError(IllegalArgumentException.class)
-                .verify();
+        assertThrows(IllegalArgumentException.class, () -> profileService.createProfile(userId, request));
     }
 
     @Test
@@ -112,34 +120,30 @@ class ProfileServiceTest {
         ProfileRequest request = new ProfileRequest();
         request.setName("Updated Profile");
 
-        when(profileRepository.findById(profileId)).thenReturn(Mono.just(testProfile));
-        when(profileRepository.save(any(Profile.class))).thenReturn(Mono.just(testProfile));
+        when(profileJpaRepository.findById(profileId)).thenReturn(Optional.of(testProfile));
+        when(profileJpaRepository.save(any(Profile.class))).thenReturn(testProfile);
 
-        StepVerifier.create(profileService.updateProfile(profileId, request))
-                .assertNext(response -> {
-                    assertNotNull(response);
-                })
-                .verifyComplete();
+        var result = profileService.updateProfile(profileId, request);
+
+        assertTrue(result.isPresent());
     }
 
     @Test
     @DisplayName("deleteProfile - Should delete profile")
     void deleteProfile_Success() {
-        when(profileRepository.findById(profileId)).thenReturn(Mono.just(testProfile));
-        when(profileRepository.deleteById(profileId)).thenReturn(Mono.empty());
+        when(profileJpaRepository.findById(profileId)).thenReturn(Optional.of(testProfile));
 
-        StepVerifier.create(profileService.deleteProfile(profileId))
-                .verifyComplete();
+        assertDoesNotThrow(() -> profileService.deleteProfile(profileId));
     }
 
     @Test
     @DisplayName("belongsToUser - Should return true when profile belongs to user")
     void belongsToUser_True() {
-        when(profileRepository.findById(profileId)).thenReturn(Mono.just(testProfile));
+        when(profileJpaRepository.findById(profileId)).thenReturn(Optional.of(testProfile));
 
-        StepVerifier.create(profileService.belongsToUser(profileId, userId))
-                .assertNext(result -> assertTrue(result))
-                .verifyComplete();
+        boolean result = profileService.belongsToUser(profileId, userId);
+
+        assertTrue(result);
     }
 
     @Test
@@ -147,20 +151,20 @@ class ProfileServiceTest {
     void belongsToUser_False() {
         UUID differentUserId = UUID.randomUUID();
         
-        when(profileRepository.findById(profileId)).thenReturn(Mono.just(testProfile));
+        when(profileJpaRepository.findById(profileId)).thenReturn(Optional.of(testProfile));
 
-        StepVerifier.create(profileService.belongsToUser(profileId, differentUserId))
-                .assertNext(result -> assertFalse(result))
-                .verifyComplete();
+        boolean result = profileService.belongsToUser(profileId, differentUserId);
+
+        assertFalse(result);
     }
 
     @Test
     @DisplayName("belongsToUser - Should return false when profile not found")
     void belongsToUser_NotFound() {
-        when(profileRepository.findById(profileId)).thenReturn(Mono.empty());
+        when(profileJpaRepository.findById(profileId)).thenReturn(Optional.empty());
 
-        StepVerifier.create(profileService.belongsToUser(profileId, userId))
-                .assertNext(result -> assertFalse(result))
-                .verifyComplete();
+        boolean result = profileService.belongsToUser(profileId, userId);
+
+        assertFalse(result);
     }
 }

@@ -1,15 +1,17 @@
 package com.betha.streamvault.streaming.service;
 
-import com.betha.streamvault.catalog.model.Content;
 import com.betha.streamvault.catalog.model.Episode;
-import com.betha.streamvault.catalog.repository.ContentRepository;
-import com.betha.streamvault.catalog.repository.EpisodeRepository;
+import com.betha.streamvault.catalog.model.EpisodeStatus;
+import com.betha.streamvault.catalog.model.Season;
+import com.betha.streamvault.catalog.repository.EpisodeJpaRepository;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import com.betha.streamvault.streaming.dto.StreamResponse;
 import com.betha.streamvault.user.model.Subscription;
+import com.betha.streamvault.user.model.SubscriptionPlan;
 import com.betha.streamvault.user.model.User;
-import com.betha.streamvault.user.repository.SubscriptionRepository;
-import com.betha.streamvault.user.repository.UserRepository;
+import com.betha.streamvault.user.model.UserRole;
+import com.betha.streamvault.user.repository.SubscriptionJpaRepository;
+import com.betha.streamvault.user.repository.UserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,14 +19,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -34,16 +36,13 @@ import static org.mockito.Mockito.when;
 class StreamServiceTest {
 
     @Mock
-    private ContentRepository contentRepository;
+    private EpisodeJpaRepository episodeJpaRepository;
 
     @Mock
-    private EpisodeRepository episodeRepository;
+    private SubscriptionJpaRepository subscriptionJpaRepository;
 
     @Mock
-    private SubscriptionRepository subscriptionRepository;
-
-    @Mock
-    private UserRepository userRepository;
+    private UserJpaRepository userJpaRepository;
 
     @Mock
     private MinioService minioService;
@@ -51,17 +50,15 @@ class StreamServiceTest {
     private StreamService streamService;
 
     private User testUser;
-    private Content testContent;
     private Episode testEpisode;
     private Subscription testSubscription;
 
     @BeforeEach
     void setUp() {
         streamService = new StreamService(
-                contentRepository,
-                episodeRepository,
-                subscriptionRepository,
-                userRepository,
+                episodeJpaRepository,
+                subscriptionJpaRepository,
+                userJpaRepository,
                 minioService
         );
         ReflectionTestUtils.setField(streamService, "presignedExpirySeconds", 7200);
@@ -70,34 +67,28 @@ class StreamServiceTest {
                 .id(UUID.randomUUID())
                 .email("test@streamvault.com")
                 .name("Test User")
-                .role("ROLE_USER")
+                .role(UserRole.ROLE_USER)
                 .isVerified(true)
-                .createdAt(Instant.now())
                 .build();
 
-        testContent = Content.builder()
+        Season testSeason = Season.builder()
                 .id(UUID.randomUUID())
-                .title("Test Movie")
-                .type("MOVIE")
-                .minioBaseKey("videos/test.mp4")
-                .status("PUBLISHED")
-                .createdAt(Instant.now())
+                .seasonNumber(1)
                 .build();
 
         testEpisode = Episode.builder()
                 .id(UUID.randomUUID())
-                .seasonId(UUID.randomUUID())
+                .season(testSeason)
                 .episodeNumber(1)
                 .title("Episode 1")
                 .minioKey("videos/episode1.mp4")
-                .status("READY")
-                .createdAt(Instant.now())
+                .status(EpisodeStatus.READY)
                 .build();
 
         testSubscription = Subscription.builder()
                 .id(UUID.randomUUID())
-                .userId(testUser.getId())
-                .plan("PREMIUM")
+                .user(testUser)
+                .plan(SubscriptionPlan.PREMIUM)
                 .startedAt(Instant.now().minus(30, ChronoUnit.DAYS))
                 .expiresAt(Instant.now().plus(30, ChronoUnit.DAYS))
                 .active(true)
@@ -107,32 +98,25 @@ class StreamServiceTest {
     @Test
     @DisplayName("getStreamUrl - Should return stream URL with active subscription")
     void getStreamUrl_Success() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
-        when(subscriptionRepository.findByUserIdAndActiveTrue(testUser.getId())).thenReturn(Mono.just(testSubscription));
-        when(contentRepository.findById(testContent.getId())).thenReturn(Mono.just(testContent));
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+        when(subscriptionJpaRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(testSubscription));
+        when(episodeJpaRepository.findById(testEpisode.getId())).thenReturn(Optional.of(testEpisode));
         when(minioService.getPresignedUrl(anyString(), any())).thenReturn("https://minio.example.com/presigned-url");
 
-        Mono<StreamResponse> result = streamService.getStreamUrl(testContent.getId(), testUser.getEmail());
+        StreamResponse result = streamService.getStreamUrl(testEpisode.getId(), testUser.getEmail());
 
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getUrl()).isEqualTo("https://minio.example.com/presigned-url");
-                    assertThat(response.getExpiresAt()).isNotNull();
-                })
-                .verifyComplete();
+        assertThat(result.getUrl()).isEqualTo("https://minio.example.com/presigned-url");
+        assertThat(result.getExpiresAt()).isNotNull();
     }
 
     @Test
     @DisplayName("getStreamUrl - Should throw exception when no subscription")
     void getStreamUrl_NoSubscription() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
-        when(subscriptionRepository.findByUserIdAndActiveTrue(testUser.getId())).thenReturn(Mono.empty());
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+        when(subscriptionJpaRepository.findByUserId(testUser.getId())).thenReturn(Optional.empty());
 
-        Mono<StreamResponse> result = streamService.getStreamUrl(testContent.getId(), testUser.getEmail());
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof StreamService.SubscriptionNotActiveException)
-                .verify();
+        assertThatThrownBy(() -> streamService.getStreamUrl(testEpisode.getId(), testUser.getEmail()))
+                .isInstanceOf(StreamService.SubscriptionNotActiveException.class);
     }
 
     @Test
@@ -140,112 +124,93 @@ class StreamServiceTest {
     void getStreamUrl_ExpiredSubscription() {
         Subscription expiredSubscription = Subscription.builder()
                 .id(UUID.randomUUID())
-                .userId(testUser.getId())
-                .plan("PREMIUM")
+                .user(testUser)
+                .plan(SubscriptionPlan.PREMIUM)
                 .startedAt(Instant.now().minus(60, ChronoUnit.DAYS))
                 .expiresAt(Instant.now().minus(1, ChronoUnit.DAYS))
                 .active(true)
                 .build();
 
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
-        when(subscriptionRepository.findByUserIdAndActiveTrue(testUser.getId())).thenReturn(Mono.just(expiredSubscription));
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+        when(subscriptionJpaRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(expiredSubscription));
 
-        Mono<StreamResponse> result = streamService.getStreamUrl(testContent.getId(), testUser.getEmail());
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof StreamService.SubscriptionNotActiveException)
-                .verify();
+        assertThatThrownBy(() -> streamService.getStreamUrl(testEpisode.getId(), testUser.getEmail()))
+                .isInstanceOf(StreamService.SubscriptionNotActiveException.class);
     }
 
     @Test
     @DisplayName("getStreamUrl - Should throw ResourceNotFoundException when content not found")
     void getStreamUrl_ContentNotFound() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
-        when(subscriptionRepository.findByUserIdAndActiveTrue(testUser.getId())).thenReturn(Mono.just(testSubscription));
-        when(contentRepository.findById(any(UUID.class))).thenReturn(Mono.empty());
+        UUID randomId = UUID.randomUUID();
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+        when(subscriptionJpaRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(testSubscription));
+        when(episodeJpaRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
 
-        Mono<StreamResponse> result = streamService.getStreamUrl(UUID.randomUUID(), testUser.getEmail());
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof ResourceNotFoundException)
-                .verify();
+        assertThatThrownBy(() -> streamService.getStreamUrl(randomId, testUser.getEmail()))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     @DisplayName("getStreamUrl - Should throw ResourceNotFoundException when user not found")
     void getStreamUrl_UserNotFound() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.empty());
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.empty());
 
-        Mono<StreamResponse> result = streamService.getStreamUrl(testContent.getId(), "notfound@test.com");
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof ResourceNotFoundException)
-                .verify();
+        assertThatThrownBy(() -> streamService.getStreamUrl(testEpisode.getId(), "notfound@test.com"))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     @DisplayName("getStreamUrl - Should throw ResourceNotFoundException when no video available")
     void getStreamUrl_NoVideoAvailable() {
-        Content contentWithoutVideo = Content.builder()
+        Episode episodeWithoutVideo = Episode.builder()
                 .id(UUID.randomUUID())
-                .title("Test Movie")
-                .type("MOVIE")
-                .minioBaseKey(null)
-                .status("PUBLISHED")
+                .season(testEpisode.getSeason())
+                .episodeNumber(1)
+                .title("Episode Without Video")
+                .minioKey(null)
+                .status(EpisodeStatus.READY)
                 .build();
 
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
-        when(subscriptionRepository.findByUserIdAndActiveTrue(testUser.getId())).thenReturn(Mono.just(testSubscription));
-        when(contentRepository.findById(contentWithoutVideo.getId())).thenReturn(Mono.just(contentWithoutVideo));
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+        when(subscriptionJpaRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(testSubscription));
+        when(episodeJpaRepository.findById(episodeWithoutVideo.getId())).thenReturn(Optional.of(episodeWithoutVideo));
 
-        Mono<StreamResponse> result = streamService.getStreamUrl(contentWithoutVideo.getId(), testUser.getEmail());
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof ResourceNotFoundException)
-                .verify();
+        assertThatThrownBy(() -> streamService.getStreamUrl(episodeWithoutVideo.getId(), testUser.getEmail()))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     @DisplayName("getEpisodeStreamUrl - Should return stream URL for episode")
     void getEpisodeStreamUrl_Success() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
-        when(subscriptionRepository.findByUserIdAndActiveTrue(testUser.getId())).thenReturn(Mono.just(testSubscription));
-        when(episodeRepository.findById(testEpisode.getId())).thenReturn(Mono.just(testEpisode));
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+        when(subscriptionJpaRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(testSubscription));
+        when(episodeJpaRepository.findById(testEpisode.getId())).thenReturn(Optional.of(testEpisode));
         when(minioService.getPresignedUrl(anyString(), any())).thenReturn("https://minio.example.com/presigned-url");
 
-        Mono<StreamResponse> result = streamService.getEpisodeStreamUrl(testContent.getId(), testEpisode.getId(), testUser.getEmail());
+        StreamResponse result = streamService.getEpisodeStreamUrl(testEpisode.getId(), testEpisode.getId(), testUser.getEmail());
 
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getUrl()).isEqualTo("https://minio.example.com/presigned-url");
-                })
-                .verifyComplete();
+        assertThat(result.getUrl()).isEqualTo("https://minio.example.com/presigned-url");
     }
 
     @Test
     @DisplayName("getEpisodeStreamUrl - Should throw exception when no subscription")
     void getEpisodeStreamUrl_NoSubscription() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
-        when(subscriptionRepository.findByUserIdAndActiveTrue(testUser.getId())).thenReturn(Mono.empty());
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+        when(subscriptionJpaRepository.findByUserId(testUser.getId())).thenReturn(Optional.empty());
 
-        Mono<StreamResponse> result = streamService.getEpisodeStreamUrl(testContent.getId(), testEpisode.getId(), testUser.getEmail());
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof StreamService.SubscriptionNotActiveException)
-                .verify();
+        assertThatThrownBy(() -> streamService.getEpisodeStreamUrl(testEpisode.getId(), testEpisode.getId(), testUser.getEmail()))
+                .isInstanceOf(StreamService.SubscriptionNotActiveException.class);
     }
 
     @Test
     @DisplayName("getEpisodeStreamUrl - Should throw ResourceNotFoundException when episode not found")
     void getEpisodeStreamUrl_EpisodeNotFound() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
-        when(subscriptionRepository.findByUserIdAndActiveTrue(testUser.getId())).thenReturn(Mono.just(testSubscription));
-        when(episodeRepository.findById(any(UUID.class))).thenReturn(Mono.empty());
+        UUID randomId = UUID.randomUUID();
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+        when(subscriptionJpaRepository.findByUserId(testUser.getId())).thenReturn(Optional.of(testSubscription));
+        when(episodeJpaRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
 
-        Mono<StreamResponse> result = streamService.getEpisodeStreamUrl(testContent.getId(), UUID.randomUUID(), testUser.getEmail());
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof ResourceNotFoundException)
-                .verify();
+        assertThatThrownBy(() -> streamService.getEpisodeStreamUrl(randomId, randomId, testUser.getEmail()))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

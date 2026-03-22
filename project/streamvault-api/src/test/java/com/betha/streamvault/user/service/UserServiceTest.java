@@ -1,10 +1,12 @@
 package com.betha.streamvault.user.service;
 
+import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import com.betha.streamvault.user.dto.ChangePasswordRequest;
 import com.betha.streamvault.user.dto.UpdateUserRequest;
 import com.betha.streamvault.user.dto.UserResponse;
 import com.betha.streamvault.user.model.User;
-import com.betha.streamvault.user.repository.UserRepository;
+import com.betha.streamvault.user.model.UserRole;
+import com.betha.streamvault.user.repository.UserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,10 +14,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,7 +29,7 @@ import static org.mockito.Mockito.when;
 class UserServiceTest {
 
     @Mock
-    private UserRepository userRepository;
+    private UserJpaRepository userJpaRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -39,53 +40,55 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, passwordEncoder);
+        userService = new UserService(userJpaRepository, passwordEncoder);
         
         testUser = User.builder()
                 .id(UUID.randomUUID())
                 .email("test@streamvault.com")
                 .name("Test User")
                 .passwordHash("hashedPassword")
-                .role("ROLE_USER")
+                .role(UserRole.ROLE_USER)
                 .isVerified(true)
-                .createdAt(Instant.now())
                 .build();
     }
 
     @Test
     @DisplayName("getCurrentUser - Should return user by email")
     void getCurrentUser_Success() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
 
-        StepVerifier.create(userService.getCurrentUser("test@streamvault.com"))
-                .assertNext(response -> {
-                    assertEquals(testUser.getEmail(), response.getEmail());
-                    assertEquals(testUser.getName(), response.getName());
-                    assertEquals(testUser.getRole(), response.getRole());
-                })
-                .verifyComplete();
+        UserResponse result = userService.getCurrentUser("test@streamvault.com");
+
+        assertEquals(testUser.getEmail(), result.getEmail());
+        assertEquals(testUser.getName(), result.getName());
+        assertEquals(testUser.getRole().name(), result.getRole());
     }
 
     @Test
-    @DisplayName("getCurrentUser - Should return empty when user not found")
+    @DisplayName("getCurrentUser - Should throw ResourceNotFoundException when user not found")
     void getCurrentUser_NotFound() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.empty());
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.empty());
 
-        StepVerifier.create(userService.getCurrentUser("notfound@streamvault.com"))
-                .verifyComplete();
+        assertThrows(ResourceNotFoundException.class, () -> userService.getCurrentUser("notfound@streamvault.com"));
     }
 
     @Test
     @DisplayName("getUserById - Should return user by ID")
     void getUserById_Success() {
-        when(userRepository.findById(any(UUID.class))).thenReturn(Mono.just(testUser));
+        when(userJpaRepository.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
 
-        StepVerifier.create(userService.getUserById(testUser.getId()))
-                .assertNext(response -> {
-                    assertEquals(testUser.getId(), response.getId());
-                    assertEquals(testUser.getEmail(), response.getEmail());
-                })
-                .verifyComplete();
+        UserResponse result = userService.getUserById(testUser.getId());
+
+        assertEquals(testUser.getId(), result.getId());
+        assertEquals(testUser.getEmail(), result.getEmail());
+    }
+
+    @Test
+    @DisplayName("getUserById - Should throw ResourceNotFoundException when user not found")
+    void getUserById_NotFound() {
+        when(userJpaRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> userService.getUserById(UUID.randomUUID()));
     }
 
     @Test
@@ -95,14 +98,12 @@ class UserServiceTest {
         request.setName("Updated Name");
         request.setEmail("updated@streamvault.com");
 
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
-        when(userRepository.save(any(User.class))).thenReturn(Mono.just(testUser));
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+        when(userJpaRepository.save(any(User.class))).thenReturn(testUser);
 
-        StepVerifier.create(userService.updateUser("test@streamvault.com", request))
-                .assertNext(response -> {
-                    assertNotNull(response);
-                })
-                .verifyComplete();
+        UserResponse result = userService.updateUser("test@streamvault.com", request);
+
+        assertNotNull(result);
     }
 
     @Test
@@ -112,13 +113,12 @@ class UserServiceTest {
         request.setCurrentPassword("oldPassword");
         request.setNewPassword("newPassword");
 
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("oldPassword", "hashedPassword")).thenReturn(true);
         when(passwordEncoder.encode("newPassword")).thenReturn("newHashedPassword");
-        when(userRepository.save(any(User.class))).thenReturn(Mono.just(testUser));
+        when(userJpaRepository.save(any(User.class))).thenReturn(testUser);
 
-        StepVerifier.create(userService.changePassword("test@streamvault.com", request))
-                .verifyComplete();
+        assertDoesNotThrow(() -> userService.changePassword("test@streamvault.com", request));
     }
 
     @Test
@@ -128,11 +128,9 @@ class UserServiceTest {
         request.setCurrentPassword("wrongPassword");
         request.setNewPassword("newPassword");
 
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(testUser));
+        when(userJpaRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("wrongPassword", "hashedPassword")).thenReturn(false);
 
-        StepVerifier.create(userService.changePassword("test@streamvault.com", request))
-                .expectError(IllegalArgumentException.class)
-                .verify();
+        assertThrows(IllegalArgumentException.class, () -> userService.changePassword("test@streamvault.com", request));
     }
 }

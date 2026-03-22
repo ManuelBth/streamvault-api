@@ -10,7 +10,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
-import reactor.test.StepVerifier;
 
 import java.time.Duration;
 
@@ -49,16 +48,12 @@ class UploadServiceTest {
         when(minioService.uploadThumbnail(anyString(), any(byte[].class), eq("image/jpeg"))).thenReturn("thumbnails/content/test.jpg");
         when(minioService.getThumbnailPresignedUrl(anyString(), any(Duration.class))).thenReturn("https://minio.example.com/thumbnails/test.jpg?token=xyz");
 
-        var result = uploadService.uploadThumbnail(file, "content");
+        UploadResponse response = uploadService.uploadThumbnail(file, "content");
 
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getFilename()).isEqualTo("test.jpg");
-                    assertThat(response.getContentType()).isEqualTo("image/jpeg");
-                    assertThat(response.getKey()).startsWith("thumbnails/content/");
-                    assertThat(response.getUrl()).isNotNull();
-                })
-                .verifyComplete();
+        assertThat(response.getFilename()).isEqualTo("test.jpg");
+        assertThat(response.getContentType()).isEqualTo("image/jpeg");
+        assertThat(response.getKey()).startsWith("thumbnails/content/");
+        assertThat(response.getUrl()).isNotNull();
     }
 
     @Test
@@ -74,13 +69,9 @@ class UploadServiceTest {
         when(minioService.uploadThumbnail(anyString(), any(byte[].class), eq("image/png"))).thenReturn("thumbnails/content/test.png");
         when(minioService.getThumbnailPresignedUrl(anyString(), any(Duration.class))).thenReturn("https://minio.example.com/thumbnails/test.png?token=xyz");
 
-        var result = uploadService.uploadThumbnail(file, "content");
+        UploadResponse response = uploadService.uploadThumbnail(file, "content");
 
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getContentType()).isEqualTo("image/png");
-                })
-                .verifyComplete();
+        assertThat(response.getContentType()).isEqualTo("image/png");
     }
 
     @Test
@@ -96,13 +87,9 @@ class UploadServiceTest {
         when(minioService.uploadThumbnail(anyString(), any(byte[].class), eq("image/webp"))).thenReturn("thumbnails/content/test.webp");
         when(minioService.getThumbnailPresignedUrl(anyString(), any(Duration.class))).thenReturn("https://minio.example.com/thumbnails/test.webp?token=xyz");
 
-        var result = uploadService.uploadThumbnail(file, "content");
+        UploadResponse response = uploadService.uploadThumbnail(file, "content");
 
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getContentType()).isEqualTo("image/webp");
-                })
-                .verifyComplete();
+        assertThat(response.getContentType()).isEqualTo("image/webp");
     }
 
     @Test
@@ -118,13 +105,9 @@ class UploadServiceTest {
         when(minioService.uploadThumbnail(anyString(), any(byte[].class), eq("image/gif"))).thenReturn("thumbnails/content/test.gif");
         when(minioService.getThumbnailPresignedUrl(anyString(), any(Duration.class))).thenReturn("https://minio.example.com/thumbnails/test.gif?token=xyz");
 
-        var result = uploadService.uploadThumbnail(file, "content");
+        UploadResponse response = uploadService.uploadThumbnail(file, "content");
 
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertThat(response.getContentType()).isEqualTo("image/gif");
-                })
-                .verifyComplete();
+        assertThat(response.getContentType()).isEqualTo("image/gif");
     }
 
     @Test
@@ -137,12 +120,9 @@ class UploadServiceTest {
                 new byte[]{1, 2, 3, 4, 5}
         );
 
-        var result = uploadService.uploadThumbnail(file, "content");
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException
-                        && throwable.getMessage().contains("Invalid file type"))
-                .verify();
+        assertThatThrownBy(() -> uploadService.uploadThumbnail(file, "content"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid file type");
     }
 
     @Test
@@ -156,12 +136,9 @@ class UploadServiceTest {
                 largeContent
         );
 
-        var result = uploadService.uploadThumbnail(file, "content");
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException
-                        && throwable.getMessage().contains("exceeds maximum"))
-                .verify();
+        assertThatThrownBy(() -> uploadService.uploadThumbnail(file, "content"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("exceeds maximum");
     }
 
     @Test
@@ -174,12 +151,9 @@ class UploadServiceTest {
                 new byte[]{1, 2, 3, 4, 5}
         );
 
-        var result = uploadService.uploadThumbnail(file, "content");
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException
-                        && throwable.getMessage().contains("Invalid file type"))
-                .verify();
+        assertThatThrownBy(() -> uploadService.uploadThumbnail(file, "content"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid file type");
     }
 
     @Test
@@ -192,11 +166,8 @@ class UploadServiceTest {
                 new byte[]{1, 2, 3, 4, 5}
         );
 
-        var result = uploadService.uploadThumbnail(file, "content");
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException)
-                .verify();
+        assertThatThrownBy(() -> uploadService.uploadThumbnail(file, "content"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -209,11 +180,8 @@ class UploadServiceTest {
                 new byte[]{1, 2, 3, 4, 5}
         );
 
-        var result = uploadService.uploadThumbnail(file, "content");
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException)
-                .verify();
+        assertThatThrownBy(() -> uploadService.uploadThumbnail(file, "content"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -229,11 +197,8 @@ class UploadServiceTest {
         when(minioService.uploadThumbnail(anyString(), any(byte[].class), eq("image/jpeg")))
                 .thenThrow(new RuntimeException("MinIO upload failed"));
 
-        var result = uploadService.uploadThumbnail(file, "content");
-
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof RuntimeException
-                        && throwable.getMessage().contains("Failed to upload thumbnail"))
-                .verify();
+        assertThatThrownBy(() -> uploadService.uploadThumbnail(file, "content"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to upload thumbnail");
     }
 }

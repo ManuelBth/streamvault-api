@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -29,12 +30,8 @@ class StreamControllerTest {
     @Mock
     private StreamService streamService;
 
+    @InjectMocks
     private StreamController streamController;
-
-    @BeforeEach
-    void setUp() {
-        streamController = new StreamController(streamService);
-    }
 
     @Test
     @DisplayName("GET /stream/{contentId} - Should return stream URL")
@@ -44,14 +41,12 @@ class StreamControllerTest {
                 .url("https://minio.example.com/presigned-url")
                 .expiresAt(Instant.now().plus(2, ChronoUnit.HOURS))
                 .build();
-        when(streamService.getStreamUrl(contentId, "test@streamvault.com")).thenReturn(Mono.just(streamResponse));
+        when(streamService.getStreamUrl(contentId, "test@streamvault.com")).thenReturn(streamResponse);
 
-        Mono<ResponseEntity<StreamResponse>> result = streamController.getStreamUrl(contentId, "test@streamvault.com");
+        ResponseEntity<StreamResponse> result = streamController.getStreamUrl(contentId, "test@streamvault.com");
 
-        ResponseEntity<StreamResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertEquals("https://minio.example.com/presigned-url", entity.getBody().getUrl());
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertEquals("https://minio.example.com/presigned-url", result.getBody().getUrl());
     }
 
     @Test
@@ -59,13 +54,11 @@ class StreamControllerTest {
     void getStreamUrl_NotFound() {
         UUID contentId = UUID.randomUUID();
         when(streamService.getStreamUrl(contentId, "test@streamvault.com"))
-                .thenReturn(Mono.error(new ResourceNotFoundException("Contenido no encontrado")));
+                .thenThrow(new ResourceNotFoundException("Contenido no encontrado"));
 
-        Mono<ResponseEntity<StreamResponse>> result = streamController.getStreamUrl(contentId, "test@streamvault.com");
+        ResponseEntity<StreamResponse> result = streamController.getStreamUrl(contentId, "test@streamvault.com");
 
-        ResponseEntity<StreamResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.NOT_FOUND, entity.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
     }
 
     @Test
@@ -73,13 +66,11 @@ class StreamControllerTest {
     void getStreamUrl_NoSubscription() {
         UUID contentId = UUID.randomUUID();
         when(streamService.getStreamUrl(contentId, "test@streamvault.com"))
-                .thenReturn(Mono.error(new StreamService.SubscriptionNotActiveException("Suscripción no activa")));
+                .thenThrow(new StreamService.SubscriptionNotActiveException("Suscripción no activa"));
 
-        Mono<ResponseEntity<StreamResponse>> result = streamController.getStreamUrl(contentId, "test@streamvault.com");
+        ResponseEntity<StreamResponse> result = streamController.getStreamUrl(contentId, "test@streamvault.com");
 
-        ResponseEntity<StreamResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.FORBIDDEN, entity.getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, result.getStatusCode());
     }
 
     @Test
@@ -92,14 +83,12 @@ class StreamControllerTest {
                 .expiresAt(Instant.now().plus(2, ChronoUnit.HOURS))
                 .build();
         when(streamService.getEpisodeStreamUrl(contentId, episodeId, "test@streamvault.com"))
-                .thenReturn(Mono.just(streamResponse));
+                .thenReturn(streamResponse);
 
-        Mono<ResponseEntity<StreamResponse>> result = streamController.getEpisodeStreamUrl(contentId, episodeId, "test@streamvault.com");
+        ResponseEntity<StreamResponse> result = streamController.getEpisodeStreamUrl(contentId, episodeId, "test@streamvault.com");
 
-        ResponseEntity<StreamResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        assertEquals("https://minio.example.com/presigned-url", entity.getBody().getUrl());
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertEquals("https://minio.example.com/presigned-url", result.getBody().getUrl());
     }
 
     @Test
@@ -108,13 +97,11 @@ class StreamControllerTest {
         UUID contentId = UUID.randomUUID();
         UUID episodeId = UUID.randomUUID();
         when(streamService.getEpisodeStreamUrl(contentId, episodeId, "test@streamvault.com"))
-                .thenReturn(Mono.error(new ResourceNotFoundException("Episodio no encontrado")));
+                .thenThrow(new ResourceNotFoundException("Episodio no encontrado"));
 
-        Mono<ResponseEntity<StreamResponse>> result = streamController.getEpisodeStreamUrl(contentId, episodeId, "test@streamvault.com");
+        ResponseEntity<StreamResponse> result = streamController.getEpisodeStreamUrl(contentId, episodeId, "test@streamvault.com");
 
-        ResponseEntity<StreamResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.NOT_FOUND, entity.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
     }
 
     @Test
@@ -123,12 +110,10 @@ class StreamControllerTest {
         UUID contentId = UUID.randomUUID();
         UUID episodeId = UUID.randomUUID();
         when(streamService.getEpisodeStreamUrl(contentId, episodeId, "test@streamvault.com"))
-                .thenReturn(Mono.error(new StreamService.SubscriptionNotActiveException("Suscripción no activa")));
+                .thenThrow(new StreamService.SubscriptionNotActiveException("Suscripción no activa"));
 
-        Mono<ResponseEntity<StreamResponse>> result = streamController.getEpisodeStreamUrl(contentId, episodeId, "test@streamvault.com");
+        ResponseEntity<StreamResponse> result = streamController.getEpisodeStreamUrl(contentId, episodeId, "test@streamvault.com");
 
-        ResponseEntity<StreamResponse> entity = result.block();
-        assertNotNull(entity);
-        assertEquals(HttpStatus.FORBIDDEN, entity.getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, result.getStatusCode());
     }
 }
