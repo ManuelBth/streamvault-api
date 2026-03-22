@@ -3,6 +3,11 @@ spring:
     url: jdbc:postgresql://localhost:5432/streamvault
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:Junos123}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:25}
