@@ -110,7 +110,7 @@ class CatalogServiceTest {
     @Test
     @DisplayName("getSeasonsByContentId - Should return seasons for content")
     void getSeasonsByContentId_Success() {
-        when(contentJpaRepository.existsById(testContent.getId())).thenReturn(true);
+        when(contentJpaRepository.findById(testContent.getId())).thenReturn(Optional.of(testContent));
         when(seasonJpaRepository.findByContentOrderBySeasonNumberAsc(testContent))
                 .thenReturn(List.of(testSeason));
 
@@ -124,7 +124,7 @@ class CatalogServiceTest {
     @Test
     @DisplayName("getEpisodesBySeasonId - Should return episodes for season")
     void getEpisodesBySeasonId_Success() {
-        when(seasonJpaRepository.existsById(testSeason.getId())).thenReturn(true);
+        when(seasonJpaRepository.findById(testSeason.getId())).thenReturn(Optional.of(testSeason));
         when(episodeJpaRepository.findBySeasonOrderByEpisodeNumberAsc(testSeason))
                 .thenReturn(List.of(testEpisode));
 

@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -65,6 +67,8 @@ class AdminUserServiceTest {
                 .role(UserRole.ROLE_ADMIN)
                 .isVerified(true)
                 .build();
+
+        ReflectionTestUtils.setField(userWithAllFields, "createdAt", Instant.now());
 
         when(userJpaRepository.findById(userWithAllFields.getId())).thenReturn(Optional.of(userWithAllFields));
 
