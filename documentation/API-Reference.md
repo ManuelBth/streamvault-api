@@ -13,7 +13,6 @@
    - [POST /api/v1/auth/login](#post-apiv1authlogin)
    - [POST /api/v1/auth/refresh](#post-apiv1authrefresh)
    - [POST /api/v1/auth/logout](#post-apiv1authlogout)
-   - [GET /api/v1/auth/confirm](#get-apiv1authconfirm)
 2. [Usuario](#2-usuario)
    - [GET /api/v1/users/me](#get-apiv1usersme)
    - [PUT /api/v1/users/me](#put-apiv1usersme)
@@ -213,26 +212,6 @@
 
 ```json
 {}
-```
-
----
-
-### GET /api/v1/auth/confirm
-
-**Descripción:** Confirma el email del usuario (endpoint placeholder).
-
-**Autenticación:** Public
-
-**Query Parameters:**
-
-- `token` (string): Token de confirmación enviado por email
-
-**Respuesta Exitosa (200):**
-
-```json
-{
-  "message": "Email confirmed"
-}
 ```
 
 ---

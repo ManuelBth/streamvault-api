@@ -120,8 +120,10 @@ public class JwtService {
     public String generateRefreshToken(UUID userId) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + refreshTokenExpiration);
+        String jti = UUID.randomUUID().toString();
 
         return Jwts.builder()
+                .id(jti)
                 .subject(userId.toString())
                 .issuedAt(now)
                 .expiration(expiry)

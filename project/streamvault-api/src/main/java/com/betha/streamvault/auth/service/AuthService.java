@@ -123,10 +123,6 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    public void confirmEmail(String token) {
-        throw new UnsupportedOperationException("confirmEmail not implemented yet");
-    }
-
     private TokenResponse generateTokens(User user) {
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole());
         String refreshToken = jwtService.generateRefreshToken(user.getId());
