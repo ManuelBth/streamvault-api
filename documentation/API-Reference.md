@@ -47,8 +47,10 @@
    - [GET /api/v1/admin/users](#get-apiv1adminusers)
    - [GET /api/v1/admin/users/{id}](#get-apiv1adminusersid)
    - [POST /api/v1/admin/upload/thumbnail](#post-apiv1adminuploadthumbnail)
-8. [Códigos de Error](#códigos-de-error)
-9. [Ejemplos con curl](#ejemplos-con-curl)
+8. [Notificaciones](#8-notificaciones)
+9. [Correo](#9-correo)
+10. [Códigos de Error](#códigos-de-error)
+11. [Ejemplos con curl](#ejemplos-con-curl)
 
 ---
 
@@ -56,16 +58,14 @@
 
 ### POST /api/v1/auth/register
 
-**Descripción:** Registra un nuevo usuario en la plataforma. Solo se permiten emails del dominio `@streamvault.com`.
+**Descripción:** Registra un nuevo usuario en la plataforma. Solo se permiten emails del dominio `@streamvault.com`. El usuario se crea con rol `ROLE_USER` y `isVerified=false`.
 
-**Autenticación:** Public
+**Autenticación:** Public (no requiere token)
 
 **Headers:**
-
 - `Content-Type: application/json`
 
 **Request Body:**
-
 ```json
 {
   "email": "usuario@streamvault.com",
@@ -81,26 +81,26 @@
 | name     | string | Sí        | Nombre completo del usuario        |
 
 **Respuesta Exitosa (201):**
-
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "accessToken": "eyJhbGciOiJSUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJSUzI1NiJ9...",
   "tokenType": "Bearer",
-  "expiresIn": 3600
+  "expiresIn": 900000
 }
 ```
 
-**Respuesta de Error (400):**
+| Campo       | Tipo   | Descripción                                      |
+| ----------- | ------ | ---------------------------------------------- |
+| accessToken | string | JWT de acceso (15 min, 900000ms)              |
+| refreshToken| string | JWT de refresh (7 días) con JTI único         |
+| tokenType   | string | Siempre "Bearer"                             |
+| expiresIn   | long   | Tiempo de expiración en milisegundos           |
 
-```json
-{
-  "status": 400,
-  "error": "Bad Request",
-  "message": "El email es obligatorio",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **400**: Validación fallida (email vacío, no es @streamvault.com, password < 8 chars, name vacío)
+- **409**: El email ya está registrado
+- **500**: Error interno del servidor
 
 ---
 
@@ -108,14 +108,12 @@
 
 **Descripción:** Inicia sesión y devuelve tokens de acceso y refresh.
 
-**Autenticación:** Public
+**Autenticación:** Public (no requiere token)
 
 **Headers:**
-
 - `Content-Type: application/json`
 
 **Request Body:**
-
 ```json
 {
   "email": "usuario@streamvault.com",
@@ -123,96 +121,90 @@
 }
 ```
 
+| Campo    | Tipo   | Requerido | Descripción           |
+| -------- | ------ | --------- | --------------------- |
+| email    | string | Sí        | Email válido          |
+| password | string | Sí        | Password del usuario  |
+
 **Respuesta Exitosa (200):**
-
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "accessToken": "eyJhbGciOiJSUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJSUzI1NiJ9...",
   "tokenType": "Bearer",
-  "expiresIn": 3600
+  "expiresIn": 900000
 }
 ```
 
-**Respuesta de Error (401):**
-
-```json
-{
-  "status": 401,
-  "error": "Unauthorized",
-  "message": "Credenciales inválidas",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **400**: Email o password vacío
+- **401**: Credenciales inválidas (email no existe o password no coincide)
+- **500**: Error interno del servidor
 
 ---
 
 ### POST /api/v1/auth/refresh
 
-**Descripción:** Refresca el token de acceso usando un refresh token válido.
+**Descripción:** Refresca el token de acceso usando un refresh token válido. El token anterior se invalida automáticamente.
 
-**Autenticación:** Public
+**Autenticación:** Public (no requiere token)
 
 **Headers:**
-
 - `Content-Type: application/json`
 
 **Request Body:**
-
 ```json
 {
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "refreshToken": "eyJhbGciOiJSUzI1NiJ9..."
 }
 ```
+
+| Campo         | Tipo   | Requerido | Descripción                    |
+| ------------- | ------ | --------- | ------------------------------ |
+| refreshToken  | string | Sí        | Refresh token válido previamente obtenido |
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "accessToken": "eyJhbGciOiJSUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJSUzI1NiJ9...",
   "tokenType": "Bearer",
-  "expiresIn": 3600
+  "expiresIn": 900000
 }
 ```
 
-**Respuesta de Error (401):**
-
-```json
-{
-  "status": 401,
-  "error": "Unauthorized",
-  "message": "Refresh token inválido o expirado",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **400**: refreshToken no proporcionado
+- **401**: Token inválido, ya revocado, o expirado
+- **500**: Error interno del servidor
 
 ---
 
 ### POST /api/v1/auth/logout
 
-**Descripción:** Invalida el refresh token (logout).
+**Descripción:** Invalida el refresh token (logout). El token se marca como revocado en la base de datos.
 
-**Autenticación:** Required (JWT Bearer token)
+**Autenticación:** No requerida (token va en el body)
 
 **Headers:**
-
-- `Authorization: Bearer {token}`
+- `Authorization: Bearer {token}` (recomendado para logging)
 - `Content-Type: application/json`
 
 **Request Body:**
-
 ```json
 {
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "refreshToken": "eyJhbGciOiJSUzI1NiJ9..."
 }
 ```
 
-**Respuesta Exitosa (200):**
+| Campo         | Tipo   | Requerido | Descripción                    |
+| ------------- | ------ | --------- | ------------------------------ |
+| refreshToken  | string | No        | Token a revocar (si es null/empty, no hace nada) |
 
-```json
-{}
-```
+**Respuesta Exitosa (204):** Sin contenido
+
+**Respuestas de Error:**
+- **500**: Error interno del servidor
 
 ---
 
@@ -225,32 +217,32 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "email": "usuario@streamvault.com",
   "name": "Nombre del Usuario",
-  "role": "USER",
+  "role": "ROLE_USER",
   "createdAt": "2024-01-15T10:30:00",
   "updatedAt": "2024-01-15T10:30:00"
 }
 ```
 
-**Respuesta de Error (401):**
+| Campo      | Tipo            | Descripción                 |
+| ---------- | --------------- | --------------------------- |
+| id         | UUID            | ID único del usuario        |
+| email      | string          | Email del usuario           |
+| name       | string          | Nombre del usuario         |
+| role       | string          | Rol (ROLE_USER, ROLE_ADMIN)|
+| createdAt  | LocalDateTime   | Fecha de creación          |
+| updatedAt  | LocalDateTime   | Fecha de última actualización|
 
-```json
-{
-  "status": 401,
-  "error": "Unauthorized",
-  "message": "Token inválido o expirado",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **404**: Usuario no encontrado
 
 ---
 
@@ -261,12 +253,10 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
-
 ```json
 {
   "name": "Nuevo Nombre",
@@ -280,17 +270,22 @@
 | email | string | No        | Nuevo email válido        |
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "email": "nuevo@streamvault.com",
   "name": "Nuevo Nombre",
-  "role": "USER",
+  "role": "ROLE_USER",
   "createdAt": "2024-01-15T10:30:00",
   "updatedAt": "2024-01-16T12:00:00"
 }
 ```
+
+**Respuestas de Error:**
+- **400**: Validación fallida
+- **401**: Token inválido o expirado
+- **404**: Usuario no encontrado
+- **409**: El email ya está en uso por otro usuario
 
 ---
 
@@ -301,12 +296,10 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
-
 ```json
 {
   "currentPassword": "contraseñaActual123",
@@ -319,22 +312,12 @@
 | currentPassword | string | Sí        | Contraseña actual         |
 | newPassword     | string | Sí        | Nueva contraseña (mín. 8) |
 
-**Respuesta Exitosa (200):**
+**Respuesta Exitosa (200):** Sin contenido (respuesta vacía)
 
-```json
-{}
-```
-
-**Respuesta de Error (400):**
-
-```json
-{
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Contraseña incorrecta",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **400**: La contraseña actual no coincide
+- **401**: Token inválido o expirado
+- **404**: Usuario no encontrado
 
 ---
 
@@ -345,36 +328,26 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
-
 - `id` (UUID): ID único del usuario
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "email": "usuario@streamvault.com",
   "name": "Nombre del Usuario",
-  "role": "USER",
+  "role": "ROLE_USER",
   "createdAt": "2024-01-15T10:30:00",
   "updatedAt": "2024-01-15T10:30:00"
 }
 ```
 
-**Respuesta de Error (404):**
-
-```json
-{
-  "status": 404,
-  "error": "Not Found",
-  "message": "Usuario no encontrado",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **404**: Usuario no encontrado
 
 ---
 
@@ -387,11 +360,9 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Respuesta Exitosa (200):**
-
 ```json
 [
   {
@@ -403,11 +374,22 @@
   {
     "id": "550e8400-e29b-41d4-a716-446655440002",
     "name": "Perfil Infantil",
-    "avatarUrl": "https://cdn.streamvault.com/avatars/child.png",
+    "avatarUrl": null,
     "createdAt": "2024-01-16T14:00:00"
   }
 ]
 ```
+
+| Campo     | Tipo        | Descripción                    |
+| --------- | ----------- | ------------------------------ |
+| id        | UUID        | ID único del perfil            |
+| name      | string      | Nombre del perfil             |
+| avatarUrl | string?     | URL del avatar (puede ser null)|
+| createdAt | LocalDateTime| Fecha de creación            |
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **404**: Usuario no encontrado
 
 ---
 
@@ -418,12 +400,10 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
-
 ```json
 {
   "name": "Nuevo Perfil"
@@ -435,15 +415,19 @@
 | name  | string | Sí        | Nombre del perfil (1-50) |
 
 **Respuesta Exitosa (201):**
-
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440003",
   "name": "Nuevo Perfil",
-  "avatarUrl": "https://cdn.streamvault.com/avatars/default.png",
+  "avatarUrl": null,
   "createdAt": "2024-01-17T09:00:00"
 }
 ```
+
+**Respuestas de Error:**
+- **400**: Validación fallida o límite de perfiles alcanzado
+- **401**: Token inválido o expirado
+- **404**: Usuario no encontrado
 
 ---
 
@@ -454,15 +438,12 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
-
 - `id` (UUID): ID único del perfil
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440001",
@@ -472,16 +453,10 @@
 }
 ```
 
-**Respuesta de Error (403):**
-
-```json
-{
-  "status": 403,
-  "error": "Forbidden",
-  "message": "No autorizado",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **403**: El perfil no pertenece al usuario autenticado
+- **404**: Perfil no encontrado o usuario no encontrado
 
 ---
 
@@ -492,24 +467,24 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Path Parameters:**
-
 - `id` (UUID): ID único del perfil
 
 **Request Body:**
-
 ```json
 {
   "name": "Nombre Actualizado"
 }
 ```
 
-**Respuesta Exitosa (200):**
+| Campo | Tipo   | Requerido | Descripción              |
+| ----- | ------ | --------- | ------------------------ |
+| name  | string | Sí        | Nombre del perfil (1-50) |
 
+**Respuesta Exitosa (200):**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440001",
@@ -518,6 +493,12 @@
   "createdAt": "2024-01-15T10:30:00"
 }
 ```
+
+**Respuestas de Error:**
+- **400**: Validación fallida
+- **401**: Token inválido o expirado
+- **403**: El perfil no pertenece al usuario autenticado
+- **404**: Perfil no encontrado
 
 ---
 
@@ -528,36 +509,60 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
-
 - `id` (UUID): ID único del perfil
 
-**Respuesta Exitosa (200):**
+**Respuesta Exitosa (204):** Sin contenido
 
-```json
-{}
-```
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **403**: El perfil no pertenece al usuario autenticado
+- **404**: Perfil no encontrado
 
 ---
 
 ## 4. Catálogo
 
+### Enums de Catálogo
+
+**ContentType:**
+| Value   | Descripción |
+| --------|-------------|
+| MOVIE   | Película    |
+| SERIES  | Serie de TV |
+
+**ContentStatus:**
+| Value      | Descripción    |
+| -----------|----------------|
+| DRAFT      | Borrador       |
+| PUBLISHED  |Publicado      |
+| UNPUBLISHED| Despublicado  |
+
+**EpisodeStatus:**
+| Value     | Descripción              |
+|-----------|-------------------------|
+| DRAFT     | Borrador                |
+| READY     | Listo para procesar    |
+| AVAILABLE | Disponible             |
+| PUBLISHED |Publicado              |
+| ARCHIVED  | Archivado              |
+| ERROR     | Error en procesamiento  |
+
+---
+
 ### GET /api/v1/catalog
 
-**Descripción:** Obtiene el catálogo completo de contenido con paginación.
+**Descripción:** Obtiene el catálogo completo de contenido con paginación. Solo retorna contenido con status=PUBLISHED.
 
-**Autenticación:** Public
+**Autenticación:** Public (sin autenticación)
 
 **Query Parameters:**
-
 - `page` (int): Número de página (default: 0)
-- `size` (int): Tamaño de página (default: 20)
+- `size` (int): Tamaño de página (default: 20, máximo: 100)
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "content": [
@@ -590,20 +595,21 @@
 }
 ```
 
+**Respuestas de Error:**
+- **400**: Parámetros de paginación inválidos
+
 ---
 
 ### GET /api/v1/catalog/{id}
 
 **Descripción:** Obtiene un contenido específico del catálogo por su ID.
 
-**Autenticación:** Public
+**Autenticación:** Public (sin autenticación)
 
 **Path Parameters:**
-
 - `id` (UUID): ID único del contenido
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440010",
@@ -619,10 +625,6 @@
     {
       "id": "550e8400-e29b-41d4-a716-446655440101",
       "name": "Acción"
-    },
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440102",
-      "name": "Aventura"
     }
   ],
   "createdAt": "2024-01-15T10:30:00",
@@ -630,33 +632,23 @@
 }
 ```
 
-**Respuesta de Error (404):**
-
-```json
-{
-  "status": 404,
-  "error": "Not Found",
-  "message": "Contenido no encontrado",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **404**: Contenido no encontrado
 
 ---
 
 ### GET /api/v1/catalog/search
 
-**Descripción:** Busca contenido en el catálogo por título o descripción.
+**Descripción:** Busca contenido en el catálogo por título. Solo retorna contenido PUBLISHED.
 
-**Autenticación:** Public
+**Autenticación:** Public (sin autenticación)
 
 **Query Parameters:**
-
-- `q` (string): Término de búsqueda
+- `q` (string): **Requerido** - Término de búsqueda
 - `page` (int): Número de página (default: 0)
 - `size` (int): Tamaño de página (default: 20)
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "content": [
@@ -684,20 +676,21 @@
 }
 ```
 
+**Respuestas de Error:**
+- **400**: Falta el parámetro `q`
+
 ---
 
 ### GET /api/v1/catalog/{id}/seasons
 
-**Descripción:** Obtiene todas las temporadas de una serie.
+**Descripción:** Obtiene todas las temporadas de una serie. Solo aplica para contenido tipo SERIES.
 
-**Autenticación:** Public
+**Autenticación:** Public (sin autenticación)
 
 **Path Parameters:**
-
 - `id` (UUID): ID del contenido (serie)
 
 **Respuesta Exitosa (200):**
-
 ```json
 [
   {
@@ -713,20 +706,21 @@
 ]
 ```
 
+**Respuestas de Error:**
+- **404**: Contenido no encontrado
+
 ---
 
 ### GET /api/v1/catalog/seasons/{seasonId}/episodes
 
 **Descripción:** Obtiene todos los episodios de una temporada.
 
-**Autenticación:** Public
+**Autenticación:** Public (sin autenticación)
 
 **Path Parameters:**
-
 - `seasonId` (UUID): ID de la temporada
 
 **Respuesta Exitosa (200):**
-
 ```json
 [
   {
@@ -756,16 +750,31 @@
 ]
 ```
 
+| Campo         | Tipo    | Descripción                     |
+|--------------|---------|---------------------------------|
+| id           | UUID    | ID único del episodio           |
+| seasonId     | UUID    | ID de la temporada             |
+| episodeNumber| int    | Número del episodio            |
+| title        | string  | Título del episodio            |
+| description  | string  | Descripción del episodio       |
+| minioKey     | string? | Clave del video en MinIO      |
+| thumbnailKey | string? | Clave del thumbnail           |
+| durationSec  | int     | Duración en segundos           |
+| status       | string  | Estado (AVAILABLE, etc.)      |
+| createdAt    | LocalDateTime| Fecha de creación         |
+
+**Respuestas de Error:**
+- **404**: Temporada no encontrada
+
 ---
 
 ### GET /api/v1/catalog/genres
 
 **Descripción:** Obtiene todos los géneros disponibles.
 
-**Autenticación:** Public
+**Autenticación:** Public (sin autenticación)
 
 **Respuesta Exitosa (200):**
-
 ```json
 [
   {
@@ -796,12 +805,10 @@
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Request Body:**
-
 ```json
 {
   "title": "Nueva Película",
@@ -812,27 +819,25 @@
   "thumbnailKey": "thumbnails/new-movie.jpg",
   "minioKey": "movies/new-movie.mp4",
   "genreIds": [
-    "550e8400-e29b-41d4-a716-446655440100",
-    "550e8400-e29b-41d4-a716-446655440101"
+    "550e8400-e29b-41d4-a716-446655440100"
   ],
   "status": "DRAFT"
 }
 ```
 
-| Campo        | Tipo   | Requerido | Descripción                      |
-| ------------ | ------ | --------- | -------------------------------- |
-| title        | string | Sí        | Título del contenido             |
-| description  | string | No        | Descripción                      |
-| type         | enum   | Sí        | MOVIE o SERIES                   |
-| releaseYear  | int    | No        | Año de lanzamiento               |
-| rating       | string | No        | Clasificación (ej: PG-13, TV-MA) |
-| thumbnailKey | string | No        | Clave del thumbnail en MinIO     |
-| minioKey     | string | No        | Clave del video en MinIO         |
-| genreIds     | UUID[] | No        | Lista de IDs de géneros          |
-| status       | enum   | No        | DRAFT, PUBLISHED, ARCHIVED       |
+| Campo        | Tipo     | Requerido | Descripción                      |
+| ------------ | -------- | --------- | -------------------------------- |
+| title        | string   | Sí        | Título (max 255)                |
+| description  | string   | No        | Descripción                      |
+| type         | enum     | Sí        | MOVIE o SERIES                   |
+| releaseYear  | int      | No        | Año de lanzamiento               |
+| rating       | string   | No        | Clasificación (max 10)           |
+| thumbnailKey | string   | No        | Clave del thumbnail en MinIO     |
+| minioKey     | string   | No        | Clave del video en MinIO         |
+| genreIds     | UUID[]   | No        | Lista de IDs de géneros          |
+| status       | enum     | No        | DRAFT, PUBLISHED, UNPUBLISHED   |
 
-**Respuesta Exitosa (200):**
-
+**Respuesta Exitosa (201):**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440010",
@@ -848,43 +853,48 @@
     {
       "id": "550e8400-e29b-41d4-a716-446655440100",
       "name": "Drama"
-    },
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440101",
-      "name": "Acción"
     }
   ],
   "createdAt": "2024-01-17T10:00:00",
-  "updatedAt": "2024-01-17T10:00:00"
+  "updatedAt": null
 }
 ```
+
+**Respuestas de Error:**
+- **400**: Validación fallida
+- **401**: Token inválido o expirado
+- **403**: No tiene rol ADMIN
+- **500**: Error interno
 
 ---
 
 ### PUT /api/v1/catalog/{id}
 
-**Descripción:** Actualiza contenido existente en el catálogo (requiere rol ADMIN).
+**Descripción:** Actualiza contenido existente en el catálogo (requiere rol ADMIN). Solo actualiza campos no nulos.
 
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Path Parameters:**
-
 - `id` (UUID): ID del contenido
 
-**Request Body:** (mismo que POST)
+**Request Body:** (mismos campos que POST, todos opcionales)
+```json
+{
+  "title": "Título Actualizado",
+  "status": "PUBLISHED"
+}
+```
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440010",
-  "title": "Película Actualizada",
-  "description": "Nueva descripción",
+  "title": "Título Actualizado",
+  "description": "Descripción existente",
   "type": "MOVIE",
   "releaseYear": 2024,
   "rating": "PG-13",
@@ -897,6 +907,13 @@
 }
 ```
 
+**Respuestas de Error:**
+- **400**: Validación fallida
+- **401**: Token inválido o expirado
+- **403**: No tiene rol ADMIN
+- **404**: Contenido no encontrado
+- **500**: Error interno
+
 ---
 
 ### DELETE /api/v1/catalog/{id}
@@ -906,14 +923,18 @@
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
-
 - `id` (UUID): ID del contenido
 
 **Respuesta Exitosa (204):** Sin contenido
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **403**: No tiene rol ADMIN
+- **404**: Contenido no encontrado
+- **500**: Error interno
 
 ---
 
@@ -921,85 +942,63 @@
 
 ### GET /api/v1/stream/{contentId}
 
-**Descripción:** Obtiene la URL de streaming para una película o contenido. Requiere suscripción activa.
+**Descripción:** Obtiene la URL de streaming para una película (content tipo MOVIE). Requiere suscripción activa.
 
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
-
-- `contentId` (UUID): ID del contenido
+- `contentId` (UUID): ID del contenido (película)
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
-  "url": "https://cdn.streamvault.com/stream/movie.mp4?token=abc123&expires=1705312800",
+  "url": "https://minio.example.com/streamvault-videos/movies/uuid-video.mp4?X-Amz-Algorithm=...",
   "expiresAt": "2024-01-15T12:00:00Z"
 }
 ```
 
-**Respuesta de Error (403):**
+| Campo      | Tipo     | Descripción                                    |
+| ----------|----------|-----------------------------------------------|
+| url       | string   | URL presignada de MinIO para el video         |
+| expiresAt | Instant | Fecha de expiración de la URL (default 2h)   |
 
-```json
-{
-  "status": 403,
-  "error": "Forbidden",
-  "message": "Suscripción no activa",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **403**: Suscripción no activa o expirada
+- **404**: Contenido no encontrado, es una serie, o video no disponible
 
-**Respuesta de Error (404):**
-
-```json
-{
-  "status": 404,
-  "error": "Not Found",
-  "message": "Contenido no encontrado",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Nota:** Solo funciona para contenido tipo MOVIE. Para series usar el endpoint de episodio.
 
 ---
 
 ### GET /api/v1/stream/{contentId}/episode/{episodeId}
 
-**Descripción:** Obtiene la URL de streaming para un episodio específico. Requiere suscripción activa.
+**Descripción:** Obtiene la URL de streaming para un episodio específico de una serie. Requiere suscripción activa.
 
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
-
 - `contentId` (UUID): ID del contenido (serie)
 - `episodeId` (UUID): ID del episodio
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
-  "url": "https://cdn.streamvault.com/stream/s01e01.mp4?token=abc123&expires=1705312800",
+  "url": "https://minio.example.com/streamvault-videos/series/uuid-s01e01.mp4?X-Amz-Algorithm=...",
   "expiresAt": "2024-01-15T12:00:00Z"
 }
 ```
 
-**Respuesta de Error (403):**
-
-```json
-{
-  "status": 403,
-  "error": "Forbidden",
-  "message": "Suscripción no activa",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **403**: Suscripción no activa o expirada
+- **404**: Episodio no encontrado, no pertenece al contentId, o video no disponible
 
 ---
 
@@ -1012,11 +1011,12 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
-**Respuesta Exitosa (200):**
+**Query Parameters:**
+- `profileId` (UUID): Opcional - ID del perfil específico (para cuentas con múltiples perfiles)
 
+**Respuesta Exitosa (200):**
 ```json
 [
   {
@@ -1038,6 +1038,9 @@
 ]
 ```
 
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+
 ---
 
 ### GET /api/v1/history/{id}
@@ -1047,15 +1050,15 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
-
 - `id` (UUID): ID del registro de historial
 
-**Respuesta Exitosa (200):**
+**Query Parameters:**
+- `profileId` (UUID): Opcional - para validación de propiedad
 
+**Respuesta Exitosa (200):**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440050",
@@ -1067,6 +1070,10 @@
 }
 ```
 
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **404**: Registro de historial no encontrado
+
 ---
 
 ### POST /api/v1/history
@@ -1076,12 +1083,13 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
-**Request Body:**
+**Query Parameters:**
+- `profileId` (UUID): Opcional - ID del perfil
 
+**Request Body:**
 ```json
 {
   "episodeId": "550e8400-e29b-41d4-a716-446655440030",
@@ -1096,8 +1104,7 @@
 | progressSec | int     | No        | Segundos reproducidos (default: 0) |
 | completed   | boolean | No        | Marcar como completado             |
 
-**Respuesta Exitosa (200):**
-
+**Respuesta Exitosa (201):**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440050",
@@ -1109,6 +1116,10 @@
 }
 ```
 
+**Respuestas de Error:**
+- **400**: Validación fallida (episodeId null, progressSec negativo)
+- **401**: Token inválido o expirado
+
 ---
 
 ### PUT /api/v1/history/{id}/progress
@@ -1118,16 +1129,16 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 - `Content-Type: application/json`
 
 **Path Parameters:**
-
 - `id` (UUID): ID del registro de historial
 
-**Request Body:**
+**Query Parameters:**
+- `profileId` (UUID): Opcional
 
+**Request Body:**
 ```json
 {
   "progressSec": 1200,
@@ -1135,8 +1146,12 @@
 }
 ```
 
-**Respuesta Exitosa (200):**
+| Campo       | Tipo    | Requerido | Descripción                        |
+| ----------- | ------- | --------- | ---------------------------------- |
+| progressSec | int     | Sí        | Segundos de progreso (no puede ser null ni negativo) |
+| completed   | boolean | No        | Marcar como completado             |
 
+**Respuesta Exitosa (200):**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440050",
@@ -1148,6 +1163,11 @@
 }
 ```
 
+**Respuestas de Error:**
+- **400**: Validación fallida
+- **401**: Token inválido o expirado
+- **404**: Registro no encontrado
+
 ---
 
 ### PUT /api/v1/history/{id}/completed
@@ -1157,15 +1177,15 @@
 **Autenticación:** Required (JWT Bearer token)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
-
 - `id` (UUID): ID del registro de historial
 
-**Respuesta Exitosa (200):**
+**Query Parameters:**
+- `profileId` (UUID): Opcional
 
+**Respuesta Exitosa (200):**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440050",
@@ -1177,27 +1197,28 @@
 }
 ```
 
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **404**: Registro no encontrado
+
 ---
 
 ## 7. Administración
 
 ### GET /api/v1/admin/users
 
-**Descripción:** Lista todos los usuarios del sistema (solo ADMIN).
+**Descripción:** Lista todos los usuarios del sistema con paginación (solo ADMIN).
 
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Query Parameters:**
-
 - `page` (int): Número de página (default: 0)
 - `size` (int): Tamaño de página (default: 20)
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "users": [
@@ -1205,15 +1226,15 @@
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "email": "usuario@streamvault.com",
       "name": "Usuario Ejemplo",
-      "role": "USER",
-      "isVerified": true,
+      "role": "ROLE_USER",
+      "isVerified": false,
       "createdAt": "2024-01-15T10:30:00"
     },
     {
       "id": "550e8400-e29b-41d4-a716-446655440001",
       "email": "admin@streamvault.com",
       "name": "Administrador",
-      "role": "ADMIN",
+      "role": "ROLE_ADMIN",
       "isVerified": true,
       "createdAt": "2024-01-01T00:00:00"
     }
@@ -1224,6 +1245,17 @@
 }
 ```
 
+| Campo      | Tipo        | Descripción                 |
+| ---------- | ----------- | --------------------------- |
+| users      | User[]      | Lista de usuarios           |
+| total      | long        | Total de usuarios           |
+| page       | int         | Página actual              |
+| size       | int         | Tamaño de página           |
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **403**: No tiene rol ADMIN
+
 ---
 
 ### GET /api/v1/admin/users/{id}
@@ -1233,81 +1265,277 @@
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 
 **Path Parameters:**
-
 - `id` (UUID): ID del usuario
 
 **Respuesta Exitosa (200):**
-
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "email": "usuario@streamvault.com",
   "name": "Usuario Ejemplo",
-  "role": "USER",
-  "isVerified": true,
+  "role": "ROLE_USER",
+  "isVerified": false,
   "createdAt": "2024-01-15T10:30:00"
 }
 ```
 
-**Respuesta de Error (404):**
-
-```json
-{
-  "status": 404,
-  "error": "Not Found",
-  "message": "Usuario no encontrado",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **403**: No tiene rol ADMIN
+- **404**: Usuario no encontrado
 
 ---
 
 ### POST /api/v1/admin/upload/thumbnail
 
-**Descripción:** Sube una imagen de thumbnail al sistema.
+**Descripción:** Sube una imagen de thumbnail al sistema (solo ADMIN).
 
 **Autenticación:** Required (JWT Bearer token - ADMIN)
 
 **Headers:**
-
 - `Authorization: Bearer {token}`
 - `Content-Type: multipart/form-data`
 
 **Form Data:**
+- `file` (File): Archivo de imagen
 
-- `file` (File): Archivo de imagen (JPEG, PNG, WebP)
+**Restricciones:**
+- Tipos permitidos: image/jpeg, image/png, image/webp, image/gif
+- Tamaño máximo: 5 MB
 
-**Respuesta Exitosa (200):**
-
+**Respuesta Exitosa (201):**
 ```json
 {
-  "key": "thumbnails/uuid-1234.jpg",
-  "url": "https://cdn.streamvault.com/thumbnails/uuid-1234.jpg",
-  "filename": "thumbnail.jpg",
+  "key": "thumbnails/content/uuid-image.jpg",
+  "url": "https://minio.example.com/thumbnails/content/uuid-image.jpg?X-Amz-Algorithm=...",
+  "filename": "poster.jpg",
   "contentType": "image/jpeg",
-  "size": 245000,
+  "size": 245678,
   "uploadedAt": "2024-01-17T10:00:00Z"
 }
 ```
 
-**Respuesta de Error (400):**
+| Campo       | Tipo    | Descripción                    |
+|------------|---------|--------------------------------|
+| key        | string  | Ruta del archivo en MinIO     |
+| url        | string  | URL presignada para acceso   |
+| filename   | string  | Nombre original del archivo   |
+| contentType| string  | Tipo MIME del archivo         |
+| size       | long    | Tamaño en bytes              |
+| uploadedAt | Instant| Fecha de subida              |
+
+**Respuestas de Error:**
+- **400**: Archivo no proporcionado, tipo inválido, o tamaño > 5MB
+- **401**: Token inválido o expirado
+- **403**: No tiene rol ADMIN
+- **500**: Error al subir a MinIO
+
+---
+
+## 8. Notificaciones
+
+### Enums de Notificaciones
+
+**NotificationType:**
+| Value            | Descripción                   |
+| -----------------|------------------------------|
+| NEW_CONTENT      | Nuevo contenido disponible   |
+| NEW_EPISODE      | Nuevo episodio disponible      |
+| USER_NOTIFICATION| Notificación de usuario       |
+| SYSTEM           | Notificación del sistema      |
+
+---
+
+### GET /api/v1/notifications
+
+**Descripción:** Obtiene todas las notificaciones del usuario autenticado, ordenadas por fecha de creación (más recientes primero).
+
+**Autenticación:** Required (JWT Bearer token)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+
+**Respuesta Exitosa (200):**
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440060",
+    "type": "NEW_EPISODE",
+    "title": "Nuevo episodio disponible",
+    "message": "El episodio 5 de Temporada 2 ya está disponible",
+    "relatedId": "550e8400-e29b-41d4-a716-446655440030",
+    "isRead": false,
+    "createdAt": "2024-01-17T15:30:00"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440061",
+    "type": "NEW_CONTENT",
+    "title": "Nuevo contenido",
+    "message": "Se agregó una nueva película al catálogo",
+    "relatedId": "550e8400-e29b-41d4-a716-446655440010",
+    "isRead": true,
+    "createdAt": "2024-01-16T10:00:00"
+  }
+]
+```
+
+| Campo      | Tipo            | Descripción                          |
+| ---------- | --------------- | ------------------------------------ |
+| id         | UUID            | ID único de la notificación          |
+| type       | enum            | Tipo de notificación                 |
+| title      | string          | Título de la notificación            |
+| message    | string          | Mensaje de la notificación           |
+| relatedId  | UUID?           | ID del contenido relacionado         |
+| isRead     | boolean         | Si la notificación ha sido leída     |
+| createdAt  | LocalDateTime   | Fecha de creación                    |
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+
+---
+
+### GET /api/v1/notifications/unread
+
+**Descripción:** Obtiene solo las notificaciones no leídas del usuario autenticado.
+
+**Autenticación:** Required (JWT Bearer token)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+
+**Respuesta Exitosa (200):**
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440060",
+    "type": "NEW_EPISODE",
+    "title": "Nuevo episodio disponible",
+    "message": "El episodio 5 de Temporada 2 ya está disponible",
+    "relatedId": "550e8400-e29b-41d4-a716-446655440030",
+    "isRead": false,
+    "createdAt": "2024-01-17T15:30:00"
+  }
+]
+```
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+
+---
+
+### GET /api/v1/notifications/unread/count
+
+**Descripción:** Obtiene la cantidad de notificaciones no leídas del usuario autenticado.
+
+**Autenticación:** Required (JWT Bearer token)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "count": 5
+}
+```
+
+| Campo  | Tipo   | Descripción                          |
+| -------| -------| ------------------------------------ |
+| count  | long   | Número de notificaciones no leídas   |
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+
+---
+
+### PUT /api/v1/notifications/{id}/read
+
+**Descripción:** Marca una notificación específica como leída.
+
+**Autenticación:** Required (JWT Bearer token)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+
+**Path Parameters:**
+- `id` (UUID): ID de la notificación
+
+**Respuesta Exitosa (200):** Sin contenido
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **404**: Notificación no encontrada
+
+---
+
+### PUT /api/v1/notifications/read-all
+
+**Descripción:** Marca todas las notificaciones del usuario autenticado como leídas.
+
+**Autenticación:** Required (JWT Bearer token)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+
+**Respuesta Exitosa (200):** Sin contenido
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+
+---
+
+## 9. Correo
+
+### POST /api/v1/mail/send
+
+**Descripción:** Envía un correo electrónico desde la cuenta del usuario autenticado.
+
+**Autenticación:** Required (JWT Bearer token)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+- `Content-Type: application/json`
+
+**Request Body:**
+```json
+{
+  "to": "destinatario@ejemplo.com",
+  "subject": "Notificación de StreamVault",
+  "body": "<h1>Hola</h1><p>Este es un mensaje de StreamVault.</p>"
+}
+```
+
+| Campo | Tipo   | Requerido | Descripción |
+|-------|--------|-----------|--------------|
+| to    | string | Sí        | Dirección de correo del destinatario |
+| subject | string | Sí      | Asunto del correo |
+| body  | string | Sí        | Cuerpo del correo (puede contener HTML) |
+| from  | string | No        | Remitente (si no se provee, usa noreply@streamvault.com) |
+
+**Respuesta Exitosa (200):** Sin contenido
+
+**Respuestas de Error:**
+- **400**: Datos inválidos (email mal formateado, campos faltantes)
+- **401**: Token inválido o expirado
+- **500**: Error interno del servidor
+
+---
+
+## Códigos de Error
+
+Todos los errores siguen este formato:
 
 ```json
 {
   "status": 400,
   "error": "Bad Request",
-  "message": "Tipo de archivo no soportado",
-  "timestamp": "2024-01-17T10:00:00"
+  "message": "Mensaje de error específico",
+  "timestamp": "2024-01-15T10:30:00"
 }
 ```
-
----
-
-## Códigos de Error
 
 | Código | Estado         | Descripción                                  |
 | ------ | -------------- | -------------------------------------------- |
@@ -1318,6 +1546,7 @@
 | 401    | Unauthorized   | Token inválido, expirado o no proporcionado  |
 | 403    | Forbidden      | Sin permisos para acceder al recurso         |
 | 404    | Not Found      | Recurso no encontrado                        |
+| 409    | Conflict       | Conflicto de datos (ej: email ya existe)     |
 | 500    | Internal Error | Error interno del servidor                   |
 
 ---
@@ -1438,4 +1667,4 @@ curl -X POST https://api.streamvault.com/api/v1/auth/logout \
 
 ---
 
-_Documentación generada automáticamente para StreamVault API v1.0_
+_StreamVault API v1.0 - Documentación actualizada automáticamente_
