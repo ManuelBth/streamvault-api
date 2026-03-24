@@ -48,9 +48,10 @@
    - [GET /api/v1/admin/users/{id}](#get-apiv1adminusersid)
    - [POST /api/v1/admin/upload/thumbnail](#post-apiv1adminuploadthumbnail)
 8. [Notificaciones](#8-notificaciones)
-9. [Correo](#9-correo)
-10. [Códigos de Error](#códigos-de-error)
-11. [Ejemplos con curl](#ejemplos-con-curl)
+9. [WebSocket](#9-websocket)
+10. [Correo](#10-correo)
+11. [Códigos de Error](#11-códigos-de-error)
+12. [Ejemplos con curl](#12-ejemplos-con-curl)
 
 ---
 
@@ -1487,7 +1488,61 @@
 
 ---
 
-## 9. Correo
+## 9. WebSocket
+
+### Conexión WebSocket
+
+**Endpoint:** `ws://TU_SERVER/ws/notifications`
+
+**Descripción:** WebSocket para recibir notificaciones en tiempo real. El cliente se conecta y envía su userId para suscribirse a las notificaciones de ese usuario.
+
+**Autenticación:** No requiere JWT (el userId se envía en el mensaje de conexión)
+
+**Ejemplo de conexión en JavaScript:**
+```javascript
+const socket = new WebSocket('ws://localhost:8080/ws/notifications');
+
+socket.onopen = () => {
+  console.log('Conectado a WebSocket');
+  // Suscribirse a notificaciones del usuario
+  socket.send(JSON.stringify({ userId: 'uuid-del-usuario' }));
+};
+
+socket.onmessage = (event) => {
+  const notification = JSON.parse(event.data);
+  console.log('Nueva notificación:', notification);
+};
+
+socket.onclose = () => {
+  console.log('Desconectado del WebSocket');
+};
+
+socket.onerror = (error) => {
+  console.error('Error en WebSocket:', error);
+};
+```
+
+**Mensajes del servidor (notificaciones entrantes):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440060",
+  "type": "NEW_EPISODE",
+  "title": "Nuevo episodio disponible",
+  "message": "El episodio 5 de Temporada 2 ya está disponible",
+  "relatedId": "550e8400-e29b-41d4-a716-446655440030",
+  "isRead": false,
+  "createdAt": "2024-01-17T15:30:00"
+}
+```
+
+**Notas:**
+- La conexión debe mantenerse abierta para recibir notificaciones en tiempo real
+- Si la conexión se cierra, el cliente debe reconectarse
+- El servidor guarda las sesiones activas por userId para enviar notificaciones directamente
+
+---
+
+## 10. Correo
 
 ### POST /api/v1/mail/send
 
@@ -1524,7 +1579,7 @@
 
 ---
 
-## Códigos de Error
+## 11. Códigos de Error
 
 Todos los errores siguen este formato:
 
@@ -1551,7 +1606,7 @@ Todos los errores siguen este formato:
 
 ---
 
-## Ejemplos con curl
+## 12. Ejemplos con curl
 
 ### Registro de usuario
 
