@@ -1,8 +1,11 @@
 package com.betha.streamvault.streaming.service;
 
+import com.betha.streamvault.catalog.model.Content;
+import com.betha.streamvault.catalog.model.ContentType;
 import com.betha.streamvault.catalog.model.Episode;
 import com.betha.streamvault.catalog.model.EpisodeStatus;
 import com.betha.streamvault.catalog.model.Season;
+import com.betha.streamvault.catalog.repository.ContentJpaRepository;
 import com.betha.streamvault.catalog.repository.EpisodeJpaRepository;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import com.betha.streamvault.streaming.dto.StreamResponse;
@@ -36,6 +39,9 @@ import static org.mockito.Mockito.when;
 class StreamServiceTest {
 
     @Mock
+    private ContentJpaRepository contentJpaRepository;
+
+    @Mock
     private EpisodeJpaRepository episodeJpaRepository;
 
     @Mock
@@ -56,6 +62,7 @@ class StreamServiceTest {
     @BeforeEach
     void setUp() {
         streamService = new StreamService(
+                contentJpaRepository,
                 episodeJpaRepository,
                 subscriptionJpaRepository,
                 userJpaRepository,

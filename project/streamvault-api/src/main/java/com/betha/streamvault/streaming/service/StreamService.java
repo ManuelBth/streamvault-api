@@ -1,6 +1,9 @@
 package com.betha.streamvault.streaming.service;
 
+import com.betha.streamvault.catalog.model.Content;
+import com.betha.streamvault.catalog.model.ContentType;
 import com.betha.streamvault.catalog.model.Episode;
+import com.betha.streamvault.catalog.repository.ContentJpaRepository;
 import com.betha.streamvault.catalog.repository.EpisodeJpaRepository;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import com.betha.streamvault.streaming.dto.StreamResponse;
@@ -23,6 +26,7 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class StreamService {
 
+    private final ContentJpaRepository contentJpaRepository;
     private final EpisodeJpaRepository episodeJpaRepository;
     private final SubscriptionJpaRepository subscriptionJpaRepository;
     private final UserJpaRepository userJpaRepository;
@@ -33,12 +37,38 @@ public class StreamService {
 
     public StreamResponse getStreamUrl(UUID contentId, String userEmail) {
         verifyActiveSubscription(userEmail);
-        return getEpisodeAndGenerateUrl(contentId);
+        
+        Content content = contentJpaRepository.findById(contentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Contenido no encontrado"));
+        
+        if (content.getType() == ContentType.MOVIE) {
+            String minioKey = content.getMinioBaseKey();
+            if (minioKey == null || minioKey.isBlank()) {
+                throw new ResourceNotFoundException("Video no disponible para esta película");
+            }
+            return generateStreamResponse(minioKey);
+        }
+        
+        throw new ResourceNotFoundException("Para series debe especificar el episodio");
     }
 
     public StreamResponse getEpisodeStreamUrl(UUID contentId, UUID episodeId, String userEmail) {
         verifyActiveSubscription(userEmail);
-        return getEpisodeAndGenerateUrl(episodeId);
+        
+        Episode episode = episodeJpaRepository.findById(episodeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Episodio no encontrado"));
+        
+        if (episode.getSeason() == null || episode.getSeason().getContent() == null ||
+            !episode.getSeason().getContent().getId().equals(contentId)) {
+            throw new ResourceNotFoundException("Episodio no encontrado para este contenido");
+        }
+        
+        String minioKey = episode.getMinioKey();
+        if (minioKey == null || minioKey.isBlank()) {
+            throw new ResourceNotFoundException("Video no disponible para este episodio");
+        }
+        
+        return generateStreamResponse(minioKey);
     }
 
     private void verifyActiveSubscription(String userEmail) {

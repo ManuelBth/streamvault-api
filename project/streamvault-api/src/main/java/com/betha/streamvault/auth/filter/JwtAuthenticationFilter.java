@@ -55,7 +55,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authHeader.substring(BEARER_PREFIX.length()).trim();
+        String token = authHeader.substring(BEARER_PREFIX.length());
         log.info("Token extracted (length {}), validating...", token.length());
 
         try {
