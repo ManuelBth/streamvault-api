@@ -18,6 +18,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -36,6 +37,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final MailUserService mailUserService;
+    private final EntityManager entityManager;
 
     @Transactional
     public TokenResponse register(RegisterRequest request) {
@@ -64,7 +66,7 @@ public class AuthService {
         return generateTokens(savedUser);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public TokenResponse login(String email, String password) {
         log.info("Login attempt for: {}", email);
         
@@ -137,6 +139,7 @@ public class AuthService {
                 .build();
         
         refreshTokenJpaRepository.save(refreshTokenEntity);
+        entityManager.flush();
         
         return TokenResponse.of(accessToken, refreshToken, 900000);
     }

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import jakarta.persistence.EntityManager;
 
 import java.util.UUID;
 
@@ -42,6 +43,9 @@ class AuthServiceTest {
     @Mock
     private MailUserService mailUserService;
 
+    @Mock
+    private EntityManager entityManager;
+
     private AuthService authService;
     private User testUser;
     private RegisterRequest registerRequest;
@@ -53,7 +57,8 @@ class AuthServiceTest {
                 refreshTokenJpaRepository,
                 jwtService,
                 passwordEncoder,
-                mailUserService
+                mailUserService,
+                entityManager
         );
 
         testUser = User.builder()
