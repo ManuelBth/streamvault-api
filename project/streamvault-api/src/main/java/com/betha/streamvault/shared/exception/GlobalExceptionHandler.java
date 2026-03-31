@@ -52,6 +52,22 @@ public class GlobalExceptionHandler {
                 .body(ApiErrorResponse.of(404, "Not Found", ex.getMessage()));
     }
 
+    @ExceptionHandler(AlreadyHasSubscriptionException.class)
+    public ResponseEntity<ApiErrorResponse> handleAlreadyHasSubscription(AlreadyHasSubscriptionException ex) {
+        log.warn("Already has subscription: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiErrorResponse.of(409, "Conflict", ex.getMessage()));
+    }
+
+    @ExceptionHandler(SubscriptionNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleSubscriptionNotFound(SubscriptionNotFoundException ex) {
+        log.warn("Subscription not found: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiErrorResponse.of(404, "Not Found", ex.getMessage()));
+    }
+
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNoResourceFound(NoResourceFoundException ex) {
         log.warn("Resource not found: {}", ex.getMessage());
