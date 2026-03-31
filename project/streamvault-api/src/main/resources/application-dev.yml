@@ -11,7 +11,7 @@ spring:
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:25}
-    username: ${MAIL_FROM:noreply@streamvault.local}
+    username: ${MAIL_FROM:}
     password: ${MAIL_PASSWORD:}
     properties:
       mail:
