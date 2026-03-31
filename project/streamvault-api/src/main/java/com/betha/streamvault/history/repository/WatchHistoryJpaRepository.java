@@ -16,4 +16,6 @@ public interface WatchHistoryJpaRepository extends JpaRepository<WatchHistory, U
     Optional<WatchHistory> findByProfileAndEpisode(Profile profile, Episode episode);
     
     List<WatchHistory> findByProfileOrderByWatchedAtDesc(Profile profile);
+    
+    void deleteByEpisodeId(UUID episodeId);
 }

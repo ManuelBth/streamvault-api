@@ -3,6 +3,7 @@ package com.betha.streamvault.catalog.service;
 import com.betha.streamvault.catalog.dto.*;
 import com.betha.streamvault.catalog.model.*;
 import com.betha.streamvault.catalog.repository.*;
+import com.betha.streamvault.history.repository.WatchHistoryJpaRepository;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -27,6 +28,7 @@ public class CatalogService {
     private final SeasonJpaRepository seasonJpaRepository;
     private final EpisodeJpaRepository episodeJpaRepository;
     private final GenreJpaRepository genreJpaRepository;
+    private final WatchHistoryJpaRepository watchHistoryJpaRepository;
 
     @Transactional(readOnly = true)
     public PagedResponse<ContentResponse> getAllContent(int page, int size) {
@@ -147,6 +149,17 @@ public class CatalogService {
     public void deleteContent(UUID id) {
         Content content = contentJpaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contenido no encontrado"));
+        
+        // Fetch seasons separately to avoid MultipleBagFetchException
+        List<Season> seasons = seasonJpaRepository.findByContentOrderBySeasonNumberAsc(content);
+        
+        for (Season season : seasons) {
+            List<Episode> episodes = episodeJpaRepository.findBySeasonOrderByEpisodeNumberAsc(season);
+            for (Episode episode : episodes) {
+                watchHistoryJpaRepository.deleteByEpisodeId(episode.getId());
+            }
+        }
+        
         contentJpaRepository.delete(content);
         log.info("Content deleted: {}", id);
     }
