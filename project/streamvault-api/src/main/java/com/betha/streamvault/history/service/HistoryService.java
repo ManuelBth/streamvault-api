@@ -167,12 +167,15 @@ public class HistoryService {
     }
 
     private WatchHistoryResponse toResponse(WatchHistory history) {
+        boolean completed = history.getProgressSec() != null && history.getProgressSec() == COMPLETED_MARKER;
+        Integer progressSec = completed ? null : history.getProgressSec();
+        
         return WatchHistoryResponse.builder()
                 .id(history.getId())
                 .profileId(history.getProfile().getId())
                 .episodeId(history.getEpisode().getId())
-                .progressSec(history.getProgressSec())
-                .completed(history.getProgressSec() != null && history.getProgressSec() == COMPLETED_MARKER)
+                .progressSec(progressSec)
+                .completed(completed)
                 .watchedAt(history.getWatchedAt() != null
                         ? history.getWatchedAt().atZone(ZoneId.systemDefault()).toLocalDateTime()
                         : null)

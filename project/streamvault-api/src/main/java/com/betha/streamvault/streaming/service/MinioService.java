@@ -1,6 +1,7 @@
 package com.betha.streamvault.streaming.service;
 
 import io.minio.MinioClient;
+import io.minio.http.Method;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +37,7 @@ public class MinioService {
                             .bucket(bucket)
                             .object(objectKey)
                             .expiry((int) expiry.toSeconds())
+                            .method(Method.GET)
                             .build());
         } catch (Exception e) {
             log.error("Failed to generate presigned URL for object: {}", objectKey, e);

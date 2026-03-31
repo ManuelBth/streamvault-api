@@ -117,7 +117,7 @@ class NotificationControllerTest {
         ResponseEntity<Void> response = notificationController
                 .markAsRead("test@streamvault.com", notificationId);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test

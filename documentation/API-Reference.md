@@ -316,7 +316,7 @@
 | currentPassword | string | Sí        | Contraseña actual         |
 | newPassword     | string | Sí        | Nueva contraseña (mín. 8) |
 
-**Respuesta Exitosa (200):** Sin contenido (respuesta vacía)
+**Respuesta Exitosa (204):** Sin contenido (respuesta vacía)
 
 **Respuestas de Error:**
 - **400**: La contraseña actual no coincide

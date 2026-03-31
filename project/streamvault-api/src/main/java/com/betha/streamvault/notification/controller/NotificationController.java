@@ -49,7 +49,7 @@ public class NotificationController {
             @PathVariable UUID id) {
         UserResponse user = userService.getCurrentUser(username);
         notificationService.markAsRead(id, user.getId());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/read-all")

@@ -4,6 +4,7 @@ import com.betha.streamvault.notification.config.NotificationWebSocketHandler;
 import com.betha.streamvault.notification.dto.NotificationResponse;
 import com.betha.streamvault.notification.model.Notification;
 import com.betha.streamvault.notification.repository.NotificationJpaRepository;
+import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import com.betha.streamvault.user.model.User;
 import com.betha.streamvault.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
@@ -70,13 +71,13 @@ public class NotificationService {
 
     @Transactional
     public void markAsRead(UUID notificationId, UUID userId) {
-        notificationJpaRepository.findById(notificationId).ifPresent(notification -> {
+        Notification notification = notificationJpaRepository.findById(notificationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notificación no encontrada"));
             if (!notification.getUser().getId().equals(userId)) {
                 throw new IllegalArgumentException("Notificación no autorizada");
             }
             notification.setIsRead(true);
             notificationJpaRepository.save(notification);
-        });
     }
 
     @Transactional

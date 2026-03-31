@@ -58,7 +58,7 @@ public class UserController {
             return ResponseEntity.status(401).build();
         }
         userService.changePassword(email, changeRequest);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
