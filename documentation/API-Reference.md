@@ -24,7 +24,10 @@
    - [GET /api/v1/profiles/{id}](#get-apiv1profilesid)
    - [PUT /api/v1/profiles/{id}](#put-apiv1profilesid)
    - [DELETE /api/v1/profiles/{id}](#delete-apiv1profilesid)
-4. [Catálogo](#4-catálogo)
+4. [Suscripciones](#4-suscripciones)
+   - [POST /api/v1/subscriptions/purchase](#post-apiv1subscriptionspurchase)
+   - [GET /api/v1/subscriptions/me](#get-apiv1subscriptionsme)
+5. [Catálogo](#5-catálogo)
    - [GET /api/v1/catalog](#get-apiv1catalog)
    - [GET /api/v1/catalog/{id}](#get-apiv1catalogid)
    - [GET /api/v1/catalog/search](#get-apiv1catalogsearch)
@@ -34,24 +37,24 @@
    - [POST /api/v1/catalog](#post-apiv1catalog)
    - [PUT /api/v1/catalog/{id}](#put-apiv1catalogid)
    - [DELETE /api/v1/catalog/{id}](#delete-apiv1catalogid)
-5. [Streaming](#5-streaming)
+6. [Streaming](#6-streaming)
    - [GET /api/v1/stream/{contentId}](#get-apiv1streamcontentid)
    - [GET /api/v1/stream/{contentId}/episode/{episodeId}](#get-apiv1streamcontentidepisodeepisodeid)
-6. [Historial](#6-historial)
+7. [Historial](#7-historial)
    - [GET /api/v1/history](#get-apiv1history)
    - [GET /api/v1/history/{id}](#get-apiv1historyid)
    - [POST /api/v1/history](#post-apiv1history)
    - [PUT /api/v1/history/{id}/progress](#put-apiv1historyidprogress)
    - [PUT /api/v1/history/{id}/completed](#put-apiv1historyidcompleted)
-7. [Administración](#7-administración)
+8. [Administración](#8-administración)
    - [GET /api/v1/admin/users](#get-apiv1adminusers)
    - [GET /api/v1/admin/users/{id}](#get-apiv1adminusersid)
    - [POST /api/v1/admin/upload/thumbnail](#post-apiv1adminuploadthumbnail)
-8. [Notificaciones](#8-notificaciones)
-9. [WebSocket](#9-websocket)
-10. [Correo](#10-correo)
-11. [Códigos de Error](#11-códigos-de-error)
-12. [Ejemplos con curl](#12-ejemplos-con-curl)
+9. [Notificaciones](#9-notificaciones)
+10. [WebSocket](#10-websocket)
+11. [Correo](#11-correo)
+12. [Códigos de Error](#12-códigos-de-error)
+13. [Ejemplos con curl](#13-ejemplos-con-curl)
 
 ---
 
@@ -524,7 +527,77 @@
 
 ---
 
-## 4. Catálogo
+## 4. Suscripciones
+
+### GET /api/v1/subscriptions/me
+
+**Descripción:** Obtiene la suscripción actual del usuario autenticado.
+
+**Autenticación:** Required (JWT Bearer token)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440100",
+  "plan": "DEFAULT",
+  "startedAt": "2026-03-30T12:00:00Z",
+  "expiresAt": "2026-04-29T12:00:00Z",
+  "active": true
+}
+```
+
+| Campo      | Tipo     | Descripción                          |
+| ---------- |----------| ------------------------------------ |
+| id         | UUID     | ID único de la suscripción           |
+| plan       | string   | Plan de suscripción (DEFAULT = $10/mes) |
+| startedAt  | Instant  | Fecha de inicio de la suscripción    |
+| expiresAt  | Instant  | Fecha de expiración de la suscripción|
+| active     | boolean  | Si la suscripción está activa        |
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **404**: Suscripción no encontrada
+
+---
+
+### POST /api/v1/subscriptions/purchase
+
+**Descripción:** Comprar una nueva suscripción. Crea una suscripción activa con duración de 30 días.
+
+**Autenticación:** Required (JWT Bearer token)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+
+**Request Body:** (vacío - el frontend maneja la "emulación" del pago)
+
+**Respuesta Exitosa (201):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440100",
+  "plan": "DEFAULT",
+  "startedAt": "2026-03-30T12:00:00Z",
+  "expiresAt": "2026-04-29T12:00:00Z",
+  "active": true
+}
+```
+
+**Notas:**
+- El precio es $10 USD por mes
+- La duración es de 30 días
+- Si el usuario ya tiene una suscripción activa, devuelve la suscripción existente (409 Conflict)
+- El frontend es responsable de manejar la "emulación" del pago
+
+**Respuestas de Error:**
+- **401**: Token inválido o expirado
+- **409**: El usuario ya tiene una suscripción activa
+
+---
+
+## 6. Catálogo
 
 ### Enums de Catálogo
 
@@ -939,7 +1012,7 @@
 
 ---
 
-## 5. Streaming
+## 6. Streaming
 
 ### GET /api/v1/stream/{contentId}
 
@@ -1003,7 +1076,7 @@
 
 ---
 
-## 6. Historial
+## 7. Historial
 
 ### GET /api/v1/history
 
@@ -1204,7 +1277,7 @@
 
 ---
 
-## 7. Administración
+## 8. Administración
 
 ### GET /api/v1/admin/users
 
@@ -1336,7 +1409,7 @@
 
 ---
 
-## 8. Notificaciones
+## 9. Notificaciones
 
 ### Enums de Notificaciones
 
@@ -1488,7 +1561,7 @@
 
 ---
 
-## 9. WebSocket
+## 10. WebSocket
 
 ### Conexión WebSocket
 
@@ -1542,7 +1615,7 @@ socket.onerror = (error) => {
 
 ---
 
-## 10. Correo
+## 11. Correo
 
 ### POST /api/v1/mail/send
 
@@ -1579,7 +1652,7 @@ socket.onerror = (error) => {
 
 ---
 
-## 11. Códigos de Error
+## 12. Códigos de Error
 
 Todos los errores siguen este formato:
 
@@ -1606,7 +1679,7 @@ Todos los errores siguen este formato:
 
 ---
 
-## 12. Ejemplos con curl
+## 13. Ejemplos con curl
 
 ### Registro de usuario
 
@@ -1718,6 +1791,20 @@ curl -X POST https://api.streamvault.com/api/v1/auth/logout \
   -H "Authorization: Bearer ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"refreshToken": "YOUR_REFRESH_TOKEN"}'
+```
+
+### Comprar suscripción
+
+```bash
+curl -X POST https://api.streamvault.com/api/v1/subscriptions/purchase \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+### Ver suscripción actual
+
+```bash
+curl -X GET https://api.streamvault.com/api/v1/subscriptions/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 ---
