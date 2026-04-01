@@ -61,7 +61,7 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    public void broadcastNotification(NotificationResponse notification) {
+    public void broadcastNotification(Object notification) {
         sessions.values().stream()
                 .filter(WebSocketSession::isOpen)
                 .forEach(session -> {

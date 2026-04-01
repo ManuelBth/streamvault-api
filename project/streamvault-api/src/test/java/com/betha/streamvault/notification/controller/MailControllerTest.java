@@ -2,7 +2,9 @@ package com.betha.streamvault.notification.controller;
 
 import com.betha.streamvault.notification.dto.SendEmailRequest;
 import com.betha.streamvault.notification.service.EmailService;
+import com.betha.streamvault.notification.service.NotificationService;
 import com.betha.streamvault.user.dto.UserResponse;
+import com.betha.streamvault.user.repository.UserJpaRepository;
 import com.betha.streamvault.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +33,12 @@ class MailControllerTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private NotificationService notificationService;
+
+    @Mock
+    private UserJpaRepository userJpaRepository;
+
     private MailController mailController;
 
     private SendEmailRequest emailRequest;
@@ -40,7 +48,7 @@ class MailControllerTest {
 
     @BeforeEach
     void setUp() {
-        mailController = new MailController(emailService, userService);
+        mailController = new MailController(emailService, userService, notificationService, userJpaRepository);
         
         emailRequest = new SendEmailRequest();
         emailRequest.setTo("recipient@example.com");

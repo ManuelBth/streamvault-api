@@ -18,6 +18,8 @@ import com.betha.streamvault.catalog.repository.EpisodeJpaRepository;
 import com.betha.streamvault.catalog.repository.GenreJpaRepository;
 import com.betha.streamvault.catalog.repository.SeasonJpaRepository;
 import com.betha.streamvault.history.repository.WatchHistoryJpaRepository;
+import com.betha.streamvault.notification.service.BroadcastNotificationService;
+import com.betha.streamvault.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,6 +54,12 @@ class CatalogServiceTest {
     @Mock
     private WatchHistoryJpaRepository watchHistoryJpaRepository;
 
+    @Mock
+    private NotificationService notificationService;
+
+    @Mock
+    private BroadcastNotificationService broadcastNotificationService;
+
     private CatalogService catalogService;
 
     private Content testContent;
@@ -61,7 +69,7 @@ class CatalogServiceTest {
 
     @BeforeEach
     void setUp() {
-        catalogService = new CatalogService(contentJpaRepository, seasonJpaRepository, episodeJpaRepository, genreJpaRepository, watchHistoryJpaRepository);
+        catalogService = new CatalogService(contentJpaRepository, seasonJpaRepository, episodeJpaRepository, genreJpaRepository, watchHistoryJpaRepository, notificationService, broadcastNotificationService);
 
         testContent = Content.builder()
                 .id(UUID.randomUUID())

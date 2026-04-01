@@ -61,7 +61,7 @@ class NotificationServiceTest {
         testNotification = Notification.builder()
                 .id(notificationId)
                 .user(testUser)
-                .type(Notification.NotificationType.NEW_CONTENT)
+                .type(Notification.NotificationType.USER_NOTIFICATION)
                 .title("Test Title")
                 .message("Test Message")
                 .relatedId(UUID.randomUUID())

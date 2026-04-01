@@ -46,11 +46,13 @@
    - [POST /api/v1/history](#post-apiv1history)
    - [PUT /api/v1/history/{id}/progress](#put-apiv1historyidprogress)
    - [PUT /api/v1/history/{id}/completed](#put-apiv1historyidcompleted)
-8. [Administración](#8-administración)
-   - [GET /api/v1/admin/users](#get-apiv1adminusers)
-   - [GET /api/v1/admin/users/{id}](#get-apiv1adminusersid)
-   - [POST /api/v1/admin/upload/thumbnail](#post-apiv1adminuploadthumbnail)
-9. [Notificaciones](#9-notificaciones)
+ 8. [Administración](#8-administración)
+    - [GET /api/v1/admin/users](#get-apiv1adminusers)
+    - [GET /api/v1/admin/users/{id}](#get-apiv1adminusersid)
+    - [POST /api/v1/admin/upload/thumbnail](#post-apiv1adminuploadthumbnail)
+    - [POST /api/v1/admin/notifications](#post-apiv1adminnotifications)
+    - [POST /api/v1/admin/notifications/broadcast](#post-apiv1adminnotificationsbroadcast)
+ 9. [Notificaciones](#9-notificaciones)
 10. [WebSocket](#10-websocket)
 11. [Correo](#11-correo)
 12. [Códigos de Error](#12-códigos-de-error)
@@ -1422,17 +1424,123 @@
 
 ---
 
+### POST /api/v1/admin/notifications
+
+**Descripción:** Envía una notificación a un usuario específico (solo ADMIN).
+
+**Autenticación:** Required (JWT Bearer token - ADMIN)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+- `Content-Type: application/json`
+
+**Request Body:**
+```json
+{
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "USER_NOTIFICATION",
+  "title": "Título de la notificación",
+  "message": "Mensaje de la notificación",
+  "relatedId": "550e8400-e29b-41d4-a716-446655440010"
+}
+```
+
+| Campo      | Tipo   | Requerido | Descripción                         |
+|------------|--------|-----------|-------------------------------------|
+| userId     | UUID   | Sí        | ID del usuario destinatario         |
+| type       | enum   | Sí        | USER_NOTIFICATION o SYSTEM         |
+| title      | string | Sí        | Título de la notificación          |
+| message    | string | Sí        | Mensaje de la notificación         |
+| relatedId  | UUID   | No        | ID del contenido relacionado        |
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440060",
+  "type": "USER_NOTIFICATION",
+  "title": "Título de la notificación",
+  "message": "Mensaje de la notificación",
+  "relatedId": "550e8400-e29b-41d4-a716-446655440010",
+  "isRead": false,
+  "createdAt": "2024-01-17T15:30:00"
+}
+```
+
+**Respuestas de Error:**
+- **400**: Validación fallida
+- **401**: Token inválido o expirado
+- **403**: No tiene rol ADMIN
+- **404**: Usuario no encontrado
+
+---
+
+### POST /api/v1/admin/notifications/broadcast
+
+**Descripción:** Envía una notificación broadcast a todos los usuarios conectados (solo ADMIN).
+
+**Autenticación:** Required (JWT Bearer token - ADMIN)
+
+**Headers:**
+- `Authorization: Bearer {token}`
+- `Content-Type: application/json`
+
+**Request Body:**
+```json
+{
+  "type": "SYSTEM",
+  "title": "Anuncio importante",
+  "message": "Mensaje para todos los usuarios",
+  "relatedId": "550e8400-e29b-41d4-a716-446655440010"
+}
+```
+
+| Campo      | Tipo   | Requerido | Descripción                         |
+|------------|--------|-----------|-------------------------------------|
+| type       | enum   | Sí        | NEW_CONTENT, NEW_EPISODE o SYSTEM   |
+| title      | string | Sí        | Título de la notificación          |
+| message    | string | Sí        | Mensaje de la notificación         |
+| relatedId  | UUID   | No        | ID del contenido relacionado        |
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440061",
+  "type": "SYSTEM",
+  "title": "Anuncio importante",
+  "message": "Mensaje para todos los usuarios",
+  "relatedId": "550e8400-e29b-41d4-a716-446655440010",
+  "createdAt": "2024-01-17T15:30:00"
+}
+```
+
+**Notas:**
+- La notificación se guarda en la tabla `broadcast_notifications`
+- Se emite por WebSocket a todos los usuarios conectados
+- El contenido relacionado se puede acceder mediante `relatedId`
+
+**Respuestas de Error:**
+- **400**: Validación fallida
+- **401**: Token inválido o expirado
+- **403**: No tiene rol ADMIN
+
+---
+
 ## 9. Notificaciones
 
 ### Enums de Notificaciones
 
-**NotificationType:**
+**NotificationType (para notificaciones de usuario):**
+| Value            | Descripción                   |
+| -----------------|------------------------------|
+| USER_NOTIFICATION| Notificación de usuario     |
+| SYSTEM           | Notificación del sistema     |
+
+**BroadcastNotificationType (para notificaciones broadcast):**
 | Value            | Descripción                   |
 | -----------------|------------------------------|
 | NEW_CONTENT      | Nuevo contenido disponible   |
-| NEW_EPISODE      | Nuevo episodio disponible      |
-| USER_NOTIFICATION| Notificación de usuario       |
-| SYSTEM           | Notificación del sistema      |
+| NEW_EPISODE      | Nuevo episodio disponible    |
+| SYSTEM           | Notificación del sistema     |
 
 ---
 

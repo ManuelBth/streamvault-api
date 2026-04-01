@@ -4,7 +4,8 @@ import com.betha.streamvault.catalog.dto.*;
 import com.betha.streamvault.catalog.model.*;
 import com.betha.streamvault.catalog.repository.*;
 import com.betha.streamvault.history.repository.WatchHistoryJpaRepository;
-import com.betha.streamvault.notification.model.Notification;
+import com.betha.streamvault.notification.model.BroadcastNotificationType;
+import com.betha.streamvault.notification.service.BroadcastNotificationService;
 import com.betha.streamvault.notification.service.NotificationService;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +34,7 @@ public class CatalogService {
     private final GenreJpaRepository genreJpaRepository;
     private final WatchHistoryJpaRepository watchHistoryJpaRepository;
     private final NotificationService notificationService;
+    private final BroadcastNotificationService broadcastNotificationService;
 
     @Transactional(readOnly = true)
     public PagedResponse<ContentResponse> getAllContent(int page, int size) {
@@ -134,8 +137,8 @@ public class CatalogService {
 
         if (saved.getStatus() == ContentStatus.PUBLISHED) {
             try {
-                notificationService.createBroadcastNotification(
-                    Notification.NotificationType.NEW_CONTENT,
+                broadcastNotificationService.createBroadcastNotification(
+                    BroadcastNotificationType.NEW_CONTENT,
                     "Nuevo contenido disponible",
                     saved.getTitle() + " ya está disponible en StreamVault",
                     saved.getId()
@@ -168,8 +171,8 @@ public class CatalogService {
             // Send notification if status changed to PUBLISHED
             if (!wasPublished && request.getStatus() == ContentStatus.PUBLISHED) {
                 try {
-                    notificationService.createBroadcastNotification(
-                        Notification.NotificationType.NEW_CONTENT,
+                    broadcastNotificationService.createBroadcastNotification(
+                        BroadcastNotificationType.NEW_CONTENT,
                         "Nuevo contenido disponible",
                         content.getTitle() + " ya está disponible en StreamVault",
                         content.getId()
