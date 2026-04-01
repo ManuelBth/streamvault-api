@@ -161,7 +161,37 @@ public class CatalogService {
         if (request.getRating() != null) content.setRating(request.getRating());
         if (request.getThumbnailKey() != null) content.setThumbnailKey(request.getThumbnailKey());
         if (request.getMinioKey() != null) content.setMinioBaseKey(request.getMinioKey());
-        if (request.getStatus() != null) content.setStatus(request.getStatus());
+        if (request.getStatus() != null) {
+            boolean wasPublished = content.getStatus() == ContentStatus.PUBLISHED;
+            content.setStatus(request.getStatus());
+            
+            // Send notification if status changed to PUBLISHED
+            if (!wasPublished && request.getStatus() == ContentStatus.PUBLISHED) {
+                try {
+                    notificationService.createBroadcastNotification(
+                        Notification.NotificationType.NEW_CONTENT,
+                        "Nuevo contenido disponible",
+                        content.getTitle() + " ya está disponible en StreamVault",
+                        content.getId()
+                    );
+                } catch (Exception e) {
+                    log.warn("Failed to send broadcast notification: {}", e.getMessage());
+                }
+            }
+        }
+        
+        // Handle genres update
+        if (request.getGenreIds() != null && !request.getGenreIds().isEmpty()) {
+            List<Genre> genres = genreJpaRepository.findAllById(request.getGenreIds());
+            if (genres.size() != request.getGenreIds().size()) {
+                throw new ResourceNotFoundException("Uno o más géneros no encontrados");
+            }
+            content.setGenres(genres);
+        } else if (request.getGenreIds() != null && request.getGenreIds().isEmpty()) {
+            // If empty list provided, clear genres
+            content.setGenres(new ArrayList<>());
+        }
+        
         content.setUpdatedAt(Instant.now());
 
         Content saved = contentJpaRepository.save(content);
@@ -189,6 +219,17 @@ public class CatalogService {
     }
 
     private ContentResponse toContentResponse(Content content) {
+        // Map genres if present
+        List<GenreResponse> genreResponses = null;
+        if (content.getGenres() != null && !content.getGenres().isEmpty()) {
+            genreResponses = content.getGenres().stream()
+                .map(genre -> GenreResponse.builder()
+                    .id(genre.getId())
+                    .name(genre.getName())
+                    .build())
+                .collect(Collectors.toList());
+        }
+        
         return ContentResponse.builder()
                 .id(content.getId())
                 .title(content.getTitle())
@@ -199,6 +240,7 @@ public class CatalogService {
                 .thumbnailKey(content.getThumbnailKey())
                 .minioKey(content.getMinioBaseKey())
                 .status(content.getStatus())
+                .genres(genreResponses)
                 .createdAt(content.getCreatedAt() != null ? content.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .updatedAt(content.getUpdatedAt() != null ? content.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
