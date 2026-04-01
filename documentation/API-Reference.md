@@ -899,6 +899,11 @@
 }
 ```
 
+> **Nota para HLS:** Para contenido HLS, usar `playlist.m3u8` como minioKey:
+> ```json
+> "minioKey": "Peliculas/Nombre_Pelicula/playlist.m3u8"
+> ```
+
 | Campo        | Tipo     | Requerido | Descripción                      |
 | ------------ | -------- | --------- | -------------------------------- |
 | title        | string   | Sí        | Título (max 255)                |
@@ -933,6 +938,8 @@
   "updatedAt": null
 }
 ```
+
+> **Nota:** El campo `genres` puede ser `null` si no se proporcionaron `genreIds` o si los géneros no existen en la base de datos.
 
 **Respuestas de Error:**
 - **400**: Validación fallida
@@ -1766,6 +1773,24 @@ curl -X PUT https://api.streamvault.com/api/v1/history/HISTORY_ID/progress \
 ```bash
 curl -X GET "https://api.streamvault.com/api/v1/admin/users?page=0&size=20" \
   -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+
+### Crear película en el catálogo (ADMIN)
+
+```bash
+curl -X POST https://api.streamvault.com/api/v1/catalog \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Peaky Blinders: El Hombre Inmortal",
+    "description": "Una película épica basada en la famosa serie",
+    "type": "MOVIE",
+    "releaseYear": 2026,
+    "rating": "R",
+    "thumbnailKey": "Peliculas/Peaky-Blinders-poster.jpg",
+    "minioKey": "Peliculas/Peaky_Blinders/playlist.m3u8",
+    "status": "PUBLISHED"
+  }'
 ```
 
 ### Subir thumbnail (ADMIN)
