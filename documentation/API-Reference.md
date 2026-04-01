@@ -966,9 +966,15 @@
 ```json
 {
   "title": "Título Actualizado",
+  "genreIds": ["550e8400-e29b-41d4-a716-446655440100"],
   "status": "PUBLISHED"
 }
 ```
+
+> **Notas:**
+> - Si `genreIds` es un array vacío `[]`, se limpian los géneros asociados
+> - Al cambiar `status` a `PUBLISHED`, se envía una notificación automática a todos los usuarios
+> - Si el contenido ya estaba publicado, no se envía notificación al actualizar otros campos
 
 **Respuesta Exitosa (200):**
 ```json
@@ -992,7 +998,7 @@
 - **400**: Validación fallida
 - **401**: Token inválido o expirado
 - **403**: No tiene rol ADMIN
-- **404**: Contenido no encontrado
+- **404**: Contenido no encontrado o géneros no encontrados
 - **500**: Error interno
 
 ---
@@ -1652,6 +1658,8 @@ socket.onerror = (error) => {
 
 **Respuesta Exitosa (200):** Sin contenido
 
+> **Nota:** Cuando el correo se envía exitosamente, el receptor recibe una notificación en la aplicación indicándole que ha recibido un correo del remitente.
+
 **Respuestas de Error:**
 - **400**: Datos inválidos (email mal formateado, campos faltantes)
 - **401**: Token inválido o expirado
@@ -1789,9 +1797,12 @@ curl -X POST https://api.streamvault.com/api/v1/catalog \
     "rating": "R",
     "thumbnailKey": "Peliculas/Peaky-Blinders-poster.jpg",
     "minioKey": "Peliculas/Peaky_Blinders/playlist.m3u8",
+    "genreIds": ["ddddddd2-dddd-4ddd-8ddd-ddddddddddd2", "c3bedb91-6b1b-40ca-99ef-13c245f59a11"],
     "status": "PUBLISHED"
   }'
 ```
+
+> **Nota:** Al crear contenido con `status: PUBLISHED`, se envía una notificación automática a todos los usuarios.
 
 ### Subir thumbnail (ADMIN)
 
