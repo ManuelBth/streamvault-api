@@ -4,6 +4,8 @@ import com.betha.streamvault.catalog.dto.*;
 import com.betha.streamvault.catalog.model.*;
 import com.betha.streamvault.catalog.repository.*;
 import com.betha.streamvault.history.repository.WatchHistoryJpaRepository;
+import com.betha.streamvault.notification.model.Notification;
+import com.betha.streamvault.notification.service.NotificationService;
 import com.betha.streamvault.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -29,6 +31,7 @@ public class CatalogService {
     private final EpisodeJpaRepository episodeJpaRepository;
     private final GenreJpaRepository genreJpaRepository;
     private final WatchHistoryJpaRepository watchHistoryJpaRepository;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PagedResponse<ContentResponse> getAllContent(int page, int size) {
@@ -118,9 +121,30 @@ public class CatalogService {
         content.setThumbnailKey(request.getThumbnailKey());
         content.setMinioBaseKey(request.getMinioKey());
         content.setStatus(request.getStatus() != null ? request.getStatus() : ContentStatus.DRAFT);
-        content.setCreatedAt(Instant.now());
+
+        if (request.getGenreIds() != null && !request.getGenreIds().isEmpty()) {
+            List<Genre> genres = genreJpaRepository.findAllById(request.getGenreIds());
+            if (genres.size() != request.getGenreIds().size()) {
+                throw new ResourceNotFoundException("Uno o más géneros no encontrados");
+            }
+            content.setGenres(genres);
+        }
 
         Content saved = contentJpaRepository.save(content);
+
+        if (saved.getStatus() == ContentStatus.PUBLISHED) {
+            try {
+                notificationService.createBroadcastNotification(
+                    Notification.NotificationType.NEW_CONTENT,
+                    "Nuevo contenido disponible",
+                    saved.getTitle() + " ya está disponible en StreamVault",
+                    saved.getId()
+                );
+            } catch (Exception e) {
+                log.warn("Failed to send broadcast notification: {}", e.getMessage());
+            }
+        }
+
         log.info("Content created: {}", saved.getId());
         return toContentResponse(saved);
     }
