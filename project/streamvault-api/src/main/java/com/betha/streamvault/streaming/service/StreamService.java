@@ -109,8 +109,9 @@ public class StreamService {
     }
 
     private StreamResponse generateStreamResponse(String minioKey) {
+        // Use public URL instead of presigned when bucket has public access policy
+        String url = minioService.getPublicVideoUrl(minioKey);
         Duration expiry = Duration.ofSeconds(presignedExpirySeconds);
-        String url = minioService.getPresignedUrl(minioKey, expiry);
         Instant expiresAt = Instant.now().plus(expiry);
         
         return StreamResponse.builder()

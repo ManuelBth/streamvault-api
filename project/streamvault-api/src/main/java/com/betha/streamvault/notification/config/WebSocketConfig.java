@@ -10,14 +10,18 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final NotificationWebSocketHandler notificationWebSocketHandler;
+    private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
 
-    public WebSocketConfig(NotificationWebSocketHandler notificationWebSocketHandler) {
+    public WebSocketConfig(NotificationWebSocketHandler notificationWebSocketHandler,
+                          JwtHandshakeInterceptor jwtHandshakeInterceptor) {
         this.notificationWebSocketHandler = notificationWebSocketHandler;
+        this.jwtHandshakeInterceptor = jwtHandshakeInterceptor;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(notificationWebSocketHandler, "/ws/notifications")
+                .addInterceptors(jwtHandshakeInterceptor)
                 .setAllowedOrigins("*");
     }
 }

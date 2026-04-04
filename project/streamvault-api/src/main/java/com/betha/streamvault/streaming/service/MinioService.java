@@ -22,6 +22,9 @@ public class MinioService {
     @Value("${minio.bucket-thumbnails:streamvault-thumbnails}")
     private String bucketThumbnails;
 
+    @Value("${minio.url:http://localhost:9000}")
+    private String minioEndpoint;
+
     public String getPresignedUrl(String objectKey, Duration expiry) {
         return getPresignedUrl(bucketVideos, objectKey, expiry);
     }
@@ -63,5 +66,20 @@ public class MinioService {
             log.error("Failed to upload to bucket: {} key: {}", bucket, key, e);
             throw new RuntimeException("Failed to upload", e);
         }
+    }
+
+    /**
+     * Returns a public URL without signing for buckets with public access.
+     * Use this when the bucket policy allows public read access.
+     */
+    public String getPublicVideoUrl(String objectKey) {
+        return String.format("%s/%s/%s", minioEndpoint, bucketVideos, objectKey);
+    }
+
+    /**
+     * Returns a public URL without signing for thumbnails bucket.
+     */
+    public String getPublicThumbnailUrl(String objectKey) {
+        return String.format("%s/%s/%s", minioEndpoint, bucketThumbnails, objectKey);
     }
 }
