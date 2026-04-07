@@ -122,6 +122,7 @@ jobs:
       
       # Construir la imagen de Docker
       # nota: el contexto de build es la raíz del repo, pero el pom.xml está en project/streamvault-api
+      # Importante: github.repository contiene mayúsculas, convertir a lowercase
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -129,9 +130,9 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ lower(github.repository) }}:latest
+            ghcr.io/${{ lower(github.repository) }}:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/${{ lower(github.repository) }}:latest
           cache-to: type=inline
 
   # --------------------------------------------------------------------------
