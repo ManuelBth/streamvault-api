@@ -82,13 +82,10 @@ jobs:
       # -----------------------------------------------------------------------
       # STEP 5: Ejecutar tests
       # -----------------------------------------------------------------------
-      # mvn test = corre todos los tests de JUnit
-      # Excluimos temporalmente tests que fallan por problemas de mock:
-      # - AuthControllerTest, JwtServiceTest: fallan en CI por autenticación
-      # - StreamServiceTest: fallan por mock de MinIO no configurado
-      # Us excludes de Maven surefire plugin
+      # Los tests que fallan están excluidos en pom.xml (surefire plugin)
+      # Archivos con problemas: AuthControllerTest, JwtServiceTest, StreamServiceTest
       - name: Run tests
-        run: cd project/streamvault-api && mvn test -Dexclude="**/AuthControllerTest.java,**/JwtServiceTest.java,**/StreamServiceTest.java"
+        run: cd project/streamvault-api && mvn test
       
       # -----------------------------------------------------------------------
       # STEP 6: Empaquetar (package)
