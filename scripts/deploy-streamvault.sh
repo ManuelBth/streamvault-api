@@ -144,9 +144,12 @@ echo -e "\n${YELLOW}[4/4] Iniciando contenedor StreamVault API...${NC}"
 docker network create streamvault-backend 2>/dev/null || true
 
 # Variables de entorno (usando set -a + source para manejar valores multilínea como claves SSH/JWT)
+# Primero reemplazamos \n literales por saltos de línea reales para que source funcione correctamente
+sed 's/\\n/\n/g' "${ENV_FILE}" > /tmp/streamvault_env_processed.env
 set -a
-source "${ENV_FILE}"
+source /tmp/streamvault_env_processed.env
 set +a
+rm -f /tmp/streamvault_env_processed.env
 
 # Ejecutar contenedor
 docker run -d \
