@@ -84,11 +84,15 @@ echo -e "${GREEN}✅ Imagen descargada${NC}"
 # -----------------------------------------------------------------------------
 echo -e "\n${YELLOW}[3/4] Configurando variables de entorno...${NC}"
 
+# Obtener directorio del script (para encontrar .env en la misma carpeta)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/.env"
+
 # Crear directorio para config
 mkdir -p ~/streamvault
 
 # Ver si existe .env, si no crear uno de ejemplo
-if [ ! -f ~/streamvault/.env ]; then
+if [ ! -f "${ENV_FILE}" ]; then
     cat > ~/streamvault/.env << 'EOF'
 # ==============================================================================
 # StreamVault API - Variables de Entorno
@@ -139,8 +143,10 @@ echo -e "\n${YELLOW}[4/4] Iniciando contenedor StreamVault API...${NC}"
 # Crear red si no existe
 docker network create streamvault-backend 2>/dev/null || true
 
-# Variables de entorno
-export $(cat ~/streamvault/.env | grep -v '^#' | xargs)
+# Variables de entorno (usando set -a + source para manejar valores multilínea como claves SSH/JWT)
+set -a
+source "${ENV_FILE}"
+set +a
 
 # Ejecutar contenedor
 docker run -d \
